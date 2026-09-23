@@ -20,9 +20,10 @@
 % raw exports per Bui et al 2026 Phys. Med. Biol. 71 175030.
 
 %% ----------------------- USER CONFIGURATION ---------------------------
-braggFile   = '/Users/mirtadumancic/Work/MATLAB_Projects/matRAD/DWA_Project/AlainaDWAFiles/TOPAS Output/DWA_PristineBraggPeaks.csv';
-spotFile    = '/Users/mirtadumancic/Work/MATLAB_Projects/matRAD/DWA_Project/AlainaDWAFiles/TOPAS Output/DWA_SpotProfiles.csv';
-twissFile   = '/Users/mirtadumancic/Work/MATLAB_Projects/matRAD/DWA_Project/AlainaDWAFiles/TOPAS Input/AlainasBeamSummaryFinalized.csv';
+
+braggFile   = '/Users/mirtadumancic/Work/MATLAB_Projects/matRAD_local/DWA_Project/AlainaDWAFiles/TOPAS Output/DWA_PristineBraggPeaks.csv';
+spotFile    = '/Users/mirtadumancic/Work/MATLAB_Projects/matRAD_local/DWA_Project/AlainaDWAFiles/TOPAS Output/DWA_SpotProfiles.csv';
+twissFile   = '/Users/mirtadumancic/Work/MATLAB_Projects/matRAD_local/DWA_Project/AlainaDWAFiles/TOPAS Input/AlainasBeamSummaryFinalized.csv';
 
 isoToSnout_mm = 400;   % physical isocenter-to-snout distance, from CSV headers
                        % (used below only as a cross-check reference value -
@@ -134,6 +135,7 @@ for i = 1:nE
     data(i).energy = E;
     data(i).depths = braggDepths{i};
     data(i).Z      = braggZ{i};
+    data(i).sigma = matRad_calcSigmaLatMCS_water(data(i).depths, data(i).energy);
     data(i).offset = 0;   % Isocenter to phantom surface distance = 0 mm
 
     % --- lateral envelope from measured spot profiles ---
@@ -154,6 +156,9 @@ for i = 1:nE
                                      % the nozzle - see note below.
     data(i).initFocus.sigma = sigmaAvg(:)';             % 1 x 5, mm
     data(i).initFocus.unit  = 'mm';
+
+    [data(i).initFocus.dist, sortIdx] = sort(data(i).initFocus.dist);
+    data(i).initFocus.sigma = data(i).initFocus.sigma(sortIdx);
 
     isoIdx = find(uniqueZ==0, 1);
     sigmaAtIso = sigmaAvg(isoIdx);
@@ -186,6 +191,7 @@ meta.BAMStoIsoDist  = isoToSnout_mm;      % 400mm, snout-to-iso (matches real sp
 meta.MCcode         = 'TOPAS';
 meta.dataType        = 'singleGauss';
 meta.fitAirOffset    = 0;
+meta.LUTspotSize = [0 100; 0 0];   % flat LUT -> focusIx always 1 (we only fit one focus per energy)
 meta.created_by      = 'matRad_buildDWAmachine.m (auto-generated)';
 meta.created_on      = datestr(now, 'dd-mmm-yyyy');
 meta.description = [ ...
@@ -210,7 +216,13 @@ meta.description = [ ...
     'fitted initFocus spot size, not a pre-measured per-depth table - ' ...
     'confirmed this is standard architecture, not a gap in this machine. ' ...
     'Intended for MC dose calculation only (no in-water depth-resolved ' ...
-    'lateral data available for cross-checking the analytical MCS model).'];
+    'lateral data available for cross-checking the analytical MCS model)' ...
+    'data(i).sigma (in-water lateral MCS broadening vs depth) is currently computed'...
+    'from matRads own Highland/Fermi-Eyges formula (Gottschalk 1992, water' ...
+    'radLength=36.3cm), NOT measured. None of the TOPAS/RayStation commissioning' ...
+    'exports (Bragg peaks, spot profiles, beam summary) contained an in-water' ...
+    'lateral-spread-vs-depth dataset. UNRESOLVED, flag for Remo - replace with' ...
+    'measured data if/when available.'];
 
 machine.meta = meta;
 machine.data = data;
@@ -321,3 +333,30 @@ function sigma = weightedSigma(pos, fluence)
     x0 = sum(w.*pos) / sum(w);
     sigma = sqrt( sum(w.*(pos-x0).^2) / sum(w) );
 end
+
+function sigmaMCS = matRad_calcSigmaLatMCS_water(depthZ_mm, primaryEnergy_MeV)
+alpha     = 2.2e-3;
+p         = 1.77;
+radLength = 36.3;
+
+origSize = size(depthZ_mm);
+depthZ_row = depthZ_mm(:)' ./ 10;            % work internally as a row
+range = alpha * primaryEnergy_MeV^p;
+
+sigma1  = @(z) 14.1^2 / radLength * (1 + 1/9 * log10(z ./ radLength)).^2;
+sigma21 = @(z) 1 ./ (1 - 2/p) .* (range.^(1 - 2/p) .* (range - z).^2 - (range - z).^(3 - 2/p));
+sigma22 = @(z) -2 * (range - z) ./ (2 - 2/p) .* (range.^(2 - 2/p) - (range - z).^(2 - 2/p));
+sigma23 = @(z) 1 ./ (3 - 2/p) .* (range.^(3 - 2/p) - (range - z).^(3 - 2/p));
+sigmaTot = @(z) alpha^(1/p) / 2 * sqrt(sigma1(z) .* (sigma21(z) + sigma22(z) + sigma23(z)));
+
+sigmaBeyond = sigmaTot(range);
+isBelowR    = depthZ_row <= range;
+isBeyondR   = depthZ_row > range;
+
+sigmaMCS = 10 .* (sigmaTot(depthZ_row) .* isBelowR + sigmaBeyond .* isBeyondR);
+sigmaMCS(depthZ_row == 0) = 0;
+sigmaMCS = real(sigmaMCS);
+
+sigmaMCS = reshape(sigmaMCS, origSize);      % match caller's shape (row or column)
+end
+
