@@ -136,6 +136,8 @@ for i = 1:nE
     data(i).depths = braggDepths{i};
     data(i).Z      = braggZ{i};
     data(i).sigma = matRad_calcSigmaLatMCS_water(data(i).depths, data(i).energy);
+    [~, maxI] = max(data(i).Z);
+    data(i).peakPos = data(i).depths(maxI);
     data(i).offset = 0;   % Isocenter to phantom surface distance = 0 mm
 
     % --- lateral envelope from measured spot profiles ---
