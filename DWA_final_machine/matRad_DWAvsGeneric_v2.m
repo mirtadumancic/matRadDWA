@@ -43,7 +43,8 @@ cd('/Users/mirtadumancic/Work/MATLAB_Projects/matRadDWA');
 run('matRad_rc');
 load('BOXPHANTOM.mat');
 
-dwaMachine = 'DWA_proton_doubleGauss_interp';
+dwaMachine = 'DWA_proton_v2';
+%dwaMachine = 'DWA_proton_doubleGauss_interp';
 dwaLayers  = 'native';    % 'native' = the 58 TOPAS layers (comparable with v1);
                           % 'all' = also the 143 interpolated layers
 fineRes    = struct('x', 2, 'y', 1, 'z', 2);   % mm; beam travels along y
