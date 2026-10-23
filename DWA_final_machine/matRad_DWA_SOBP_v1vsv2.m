@@ -32,8 +32,8 @@ cd(rootDir);
 matRad_rc;
 
 %% ---------------- settings --------------------------------------------
-machines = {'DWA_proton_doubleGauss_interp', 'DWA_proton_v2', 'Generic'};
-labels   = {'DWA v1 (constant air halo)', 'DWA v2 (depth-dependent halo)', 'Generic'};
+machines = {'DWA_proton_v2', 'IBA_cyclotron', 'Generic'};
+labels   = {'DWA v2 (depth-dependent halo)', 'IBA cyclotron', 'Generic'};
 cols     = {[0.60 0.60 0.60], [0.75 0.14 0.23], [0.13 0.36 0.67]};
 
 bixelWidth   = 3;        % mm, lateral spot spacing (DWA core sigma ~1.3-2 mm)

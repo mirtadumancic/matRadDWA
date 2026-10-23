@@ -1,0 +1,51 @@
+#Exported from RayStation 14.0.100.0
+#Time of export 10/22/2026 10:37:26 AM
+#Machine name: GTR102_AddedRS
+#Commission status: Commissioned
+#Commission time: 8/20/2026 1:20:36 PM
+#Measured ion calibration points
+#Field collimation: Snout
+#Dose unit: cGy
+Origin of data [Measured/Computed]:; Measured
+Machine/Treatment room:; GTR102_AddedRS
+Snout name:; Snout_400x300
+Radiation type:; Proton
+Curve type [Depth/X/Y/AbsoluteDosimetry]:; AbsoluteDosimetry
+Medium:; Water
+Isocenter to snout distance [mm]:; 400
+Scanned field size (x y) [mm]:; 120; 120
+Spot spacing [mm]:; 5
+Detector lateral shape [Quadratic/Circular]:; Circular
+Detector lateral side/diameter [mm]:; 20
+Measurement (Nominal energy [MeV/A] Depth [mm] Isocenter to phantom surface distance [mm] DosePerMU [cGy/MU]):; 
+122.46; 20; 20; 0.077
+118.69; 20; 20; 0.07733
+115.09; 20; 20; 0.07755
+110.04; 20; 20; 0.07788
+106.57; 20; 20; 0.07832
+102.36; 20; 20; 0.07887
+99.59; 20; 20; 0.0792
+153.04; 50; 50; 0.08371
+149.07; 50; 50; 0.08426
+144.81; 50; 50; 0.0847
+140.63; 50; 50; 0.08541
+136.07; 50; 50; 0.08624
+131.51; 50; 50; 0.08714
+127.38; 50; 50; 0.08811
+176.21; 100; 100; 0.09185
+171.89; 100; 100; 0.09295
+167.79; 100; 100; 0.09383
+163.02; 100; 100; 0.09548
+158.09; 100; 100; 0.09724
+199.63; 150; 150; 0.09636
+195.1; 150; 150; 0.09768
+190.18; 150; 150; 0.09955
+185.74; 150; 150; 0.10175
+180.9; 150; 150; 0.10472
+226.35; 200; 200; 0.09691
+223.91; 200; 200; 0.09779
+219.06; 200; 200; 0.09933
+214.12; 200; 200; 0.10164
+209.16; 200; 200; 0.1045
+204.54; 200; 200; 0.10769
+End:; 
