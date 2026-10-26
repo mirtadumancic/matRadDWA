@@ -29,6 +29,7 @@ classdef (Abstract) matRad_DoseOptimizationFunction
     
     properties
         robustness = 'none';    %Robustness setting -> may be removed from the DoseObjective class in a future release
+        quantity = '';          %Optimization quantity name, empty uses pln.propOpt.quantityOpt
     end
     
     methods
@@ -44,6 +45,7 @@ classdef (Abstract) matRad_DoseOptimizationFunction
             s.className = class(obj);
             s.parameters = obj.parameters;
             s.robustness = obj.robustness;
+            s.quantity = obj.quantity;
         end
         
         function obj = set.robustness(obj,robustness)

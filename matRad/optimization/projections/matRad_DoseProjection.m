@@ -1,5 +1,5 @@
 classdef matRad_DoseProjection < matRad_BackProjection
-% matRad_DoseProjection class to compute physical dose during optimization
+% matRad_DoseProjection Deprecated. Use matRad_BackProjection with defaultQuantity 'physicalDose'.
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -12,58 +12,13 @@ classdef matRad_DoseProjection < matRad_BackProjection
 % propagated, or distributed except according to the terms contained in the 
 % LICENSE file.
 %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
-    
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
     methods
         function obj = matRad_DoseProjection()
-            
+            obj.defaultQuantity = 'physicalDose';
+            obj.warnDeprecatedProjection();
         end
     end
-    
-    methods 
-        function d = computeSingleScenario(~,dij,scen,w)
-            if ~isempty(dij.physicalDose{scen})
-                d = dij.physicalDose{scen}*w;
-            else
-                d = [];
-                matRad_cfg = MatRad_Config.instance();
-                matRad_cfg.dispWarning('Empty scenario in optimization detected! This should not happen...\n');
-            end 
-        end
-        
-        function [dExp,dOmegaV] = computeSingleScenarioProb(~,dij,scen,w)
-            if ~isempty(dij.physicalDoseExp{scen})
-                dExp = dij.physicalDoseExp{scen}*w;
-                
-                for i = 1:size(dij.physicalDoseOmega,2)
-                   dOmegaV{scen,i} = dij.physicalDoseOmega{scen,i} * w;
-                end 
-            else
-                dExp = [];
-                dOmegaV = [];
-            end             
-        end
-        
-        function wGrad = projectSingleScenarioGradient(~,dij,doseGrad,scen,~)
-            if ~isempty(dij.physicalDose{scen})
-                wGrad = (doseGrad{scen}' * dij.physicalDose{scen})';
-            else
-                wGrad = [];
-                matRad_cfg = MatRad_Config.instance();
-                matRad_cfg.dispWarning('Empty scenario in optimization detected! This should not happen...\n');
-            end
-        end
-        
-        function wGrad = projectSingleScenarioGradientProb(~,dij,dExpGrad,dOmegaVgrad,scen,~)
-            if ~isempty(dij.physicalDoseExp{scen})
-                wGrad = (dExpGrad{scen}' * dij.physicalDoseExp{scen})';
-                wGrad = wGrad + 2 * dOmegaVgrad;
-            else
-                wGrad = [];
-                matRad_cfg = MatRad_Config.instance();
-                matRad_cfg.dispWarning('Empty scenario in optimization detected! This should not happen...\n');
-            end
-        end
-    end
-end
 
+end

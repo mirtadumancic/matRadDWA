@@ -33,7 +33,9 @@ function c = matRad_constraintFunctions(optiProb,w,dij,cst)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-% get current dose / effect / RBExDose vector
+matRad_cfg = MatRad_Config.instance();
+
+% get current quantities, d.(quantityName){scen}
 optiProb.BP.compute(dij,w);
 d = optiProb.BP.GetResult();
 
@@ -42,12 +44,15 @@ useScen  = optiProb.BP.scenarios;
 scenProb = optiProb.BP.scenarioProb;
 
 % retrieve matching 4D scenarios
-fullScen = cell(ndims(d),1);
-[fullScen{:}] = ind2sub(size(d),useScen);
+fullScen = cell(ndims(dij.physicalDose),1);
+[fullScen{:}] = ind2sub(size(dij.physicalDose),useScen);
 contourScen = fullScen{1};
 
 % Initializes constraints
 c = [];
+
+% min/max cache for voxel-wise worst case, per quantity
+dTmp = struct();
 
 % compute objective function for every VOI.
 for  i = 1:size(cst,1)
@@ -63,21 +68,22 @@ for  i = 1:size(cst,1)
          % only perform computations for constraints
          if isa(constraint,'DoseConstraints.matRad_DoseConstraint')
             
-            % rescale dose parameters to biological optimization quantity if required
-            constraint = optiProb.BP.setBiologicalDosePrescriptions(constraint,cst{i,5}.alphaX,cst{i,5}.betaX);
+            quantityName = optiProb.BP.getQuantityName(constraint);
+            dQ = d.(quantityName);
+
+            % rescale dose parameters to the optimization quantity if required
+            constraint = optiProb.BP.getQuantity(quantityName).setBiologicalDosePrescriptions(constraint,cst{i,5}.alphaX,cst{i,5}.betaX);
             
             % retrieve the robustness type
             robustness = constraint.robustness;
             
             switch robustness
                case 'none' % if conventional opt: just sum objectives of nominal dose
-                   d_i = d{1}(cst{i,4}{1});
+                   d_i = dQ{1}(cst{i,4}{1});
                    c = [c; constraint.computeDoseConstraintFunction(d_i)];
                   
-               case 'PROB' % if prob opt: sum up expectation value of objectives
-                  
-                  d_i = dExp{1}(cst{i,4}{1});
-                  c = [c; constraint.computeDoseConstraintFunction(d_i)];
+               case 'PROB'
+                  matRad_cfg.dispError('PROB robustness is currently not supported!');
                   
                case 'VWWC'  % voxel-wise worst case - takes minimum dose in TARGET and maximum in OAR
                   contourIx = unique(contourScen);
@@ -88,11 +94,11 @@ for  i = 1:size(cst,1)
                   end
                   
                   % prepare min/max dose vector
-                  if ~exist('d_tmp','var')
-                     d_tmp = [d{useScen}];
+                  if ~isfield(dTmp,quantityName)
+                     dTmp.(quantityName) = [dQ{useScen}];
                   end
                   
-                  d_Scen = d_tmp(cst{i,4}{contourIx},:);
+                  d_Scen = dTmp.(quantityName)(cst{i,4}{contourIx},:);
                   
                   d_max = max(d_Scen,[],2);
                   d_min = min(d_Scen,[],2);
@@ -114,11 +120,11 @@ for  i = 1:size(cst,1)
                   end
                   
                   % prepare min/max dose vector
-                  if ~exist('d_tmp','var')
-                     d_tmp = [d{:}];
+                  if ~isfield(dTmp,quantityName)
+                     dTmp.(quantityName) = [dQ{useScen}];
                   end
                   
-                  d_Scen = d_tmp(cst{i,4}{contourIx},:);
+                  d_Scen = dTmp.(quantityName)(cst{i,4}{contourIx},:);
                   d_max = max(d_Scen,[],2);
                   d_min = min(d_Scen,[],2);
                   

@@ -85,8 +85,10 @@ options.model        = pln.bioModel.model;
 % update aperture info vector
 apertureInfo = matRad_OptimizationProblemDAO.matRad_daoVec2ApertureInfo(apertureInfo,apertureInfo.apertureVector);
 
-%Use Dose Projection only
-backProjection = matRad_DoseProjection();
+%Use physical dose only
+backProjection = matRad_BackProjection();
+backProjection.defaultQuantity = 'physicalDose';
+backProjection.instantiateQuantities(cst);
 
 optiProb = matRad_OptimizationProblemDAO(backProjection,apertureInfo);
 

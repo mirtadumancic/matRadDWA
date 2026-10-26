@@ -28,9 +28,6 @@ function [cl,cu] = matRad_getConstraintBounds(optiProb,cst)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-BPtype = class(optiProb.BP);
-isEffectBP = strcmp(BPtype,'matRad_EffectProjection');
-
 % Initialize bounds
 cl = [];
 cu = [];
@@ -65,13 +62,8 @@ for  i = 1:size(cst,1)
             %if ~isempty(strfind(cst{i,6}{j}.type,'constraint'))
             if isa(optiFunc,'DoseConstraints.matRad_DoseConstraint')
                 
-                if isEffectBP
-                   
-                    doses  = optiFunc.getDoseParameters();
-                    effect = cst{i,5}.alphaX*doses + cst{i,5}.betaX*doses.^2;
-                    
-                    optiFunc = optiFunc.setDoseParameters(effect);
-                end
+                % rescale dose parameters to the optimization quantity if required
+                optiFunc = optiProb.BP.getQuantity(optiFunc).setBiologicalDosePrescriptions(optiFunc,cst{i,5}.alphaX,cst{i,5}.betaX);
                    
                  cl = [cl;optiFunc.lowerBounds(numel(cst{i,4}{1}))];
                  cu = [cu;optiFunc.upperBounds(numel(cst{i,4}{1}))];

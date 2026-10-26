@@ -1,0 +1,337 @@
+function [dij,cst,pln,wInit,optiProb] = matRad_initOptimization(dij,cst,pln,wInit)
+% matRad_initOptimization prepares dij, cst and the optimization problem
+% for fluence optimization
+%
+% call:
+%   [dij,cst,pln,wInit,optiProb] = matRad_initOptimization(dij,cst,pln)
+%   [dij,cst,pln,wInit,optiProb] = matRad_initOptimization(dij,cst,pln,wInit)
+%
+% input:
+%   dij:        matRad dij struct
+%   cst:        matRad cst struct
+%   pln:        matRad pln struct
+%   wInit:      (optional) custom weights to initialize problems
+%
+% output:
+%   dij:        dij prepared for optimization
+%   cst:        cst on the dose grid with fractionated objectives
+%   pln:        pln with validated bioModel, multScen and propOpt
+%   wInit:      initial weights
+%   optiProb:   matRad_OptimizationProblem
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Copyright 2016-2026 the matRad development team.
+%
+% This file is part of the matRad project. It is subject to the license
+% terms in the LICENSE file found in the top-level directory of this
+% distribution and at https://github.com/e0404/matRad/LICENSE.md. No part
+% of the matRad project, including this file, may be copied, modified,
+% propagated, or distributed except according to the terms contained in the
+% LICENSE file.
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+matRad_cfg = MatRad_Config.instance();
+
+if isfield(pln, 'propOpt') && isfield(pln.propOpt, 'enableGPU')
+    enableGPU = pln.propOpt.enableGPU;
+else
+    enableGPU = matRad_cfg.defaults.propOpt.enableGPU;
+end
+
+if enableGPU
+    try
+        d = gpuDevice;
+        cst = matRad_moveCstToGPU(cst);
+        dij = matRad_moveDijToGPU(dij);
+        matRad_cfg.dispInfo('Running optimization on the GPU (as far as possible). Selected device: %s\n', d.Name);
+    catch ME
+        matRad_cfg.dispWarning('Failed to prepae GPU-based optimization, reverting to CPU. Reason: %s\n', ME.message);
+        enableGPU = false;
+    end
+end
+
+% consider VOI priorities
+cst  = matRad_setOverlapPriorities(cst);
+
+% check & adjust objectives and constraints internally for fractionation
+for i = 1:size(cst,1)
+    %Compatibility Layer for old objective format
+    if isstruct(cst{i,6})
+        cst{i,6} = arrayfun(@matRad_DoseOptimizationFunction.convertOldOptimizationStruct,cst{i,6},'UniformOutput',false);
+    end
+    for j = 1:numel(cst{i,6})
+
+        obj = cst{i,6}{j};
+
+        %In case it is a default saved struct, convert to object
+        %Also intrinsically checks that we have a valid optimization
+        %objective or constraint function in the end
+        if ~isa(obj,'matRad_DoseOptimizationFunction')
+            try
+                obj = matRad_DoseOptimizationFunction.createInstanceFromStruct(obj);
+            catch
+                matRad_cfg.dispError('cst{%d,6}{%d} is not a valid Objective/constraint! Remove or Replace and try again!',i,j);
+            end
+        end
+
+        obj = obj.setDoseParameters(obj.getDoseParameters()/pln.numOfFractions);
+
+        cst{i,6}{j} = obj;
+    end
+end
+
+% resizing cst to dose cube resolution
+cst = matRad_resizeCstToGrid(cst,dij.ctGrid.x,  dij.ctGrid.y,  dij.ctGrid.z,...
+    dij.doseGrid.x,dij.doseGrid.y,dij.doseGrid.z);
+
+% Get rid of voxels that are not interesting for the optimization problem
+if ~isfield(pln,'propOpt') || ~isfield(pln.propOpt, 'clearUnusedVoxels')
+    pln.propOpt.clearUnusedVoxels = matRad_cfg.defaults.propOpt.clearUnusedVoxels;
+end
+
+if pln.propOpt.clearUnusedVoxels
+    dij = matRad_clearUnusedVoxelsFromDij(cst, dij);
+end
+
+%Check how to use 4D data
+if isfield(pln,'propOpt') && isfield(pln.propOpt,'scen4D')
+    scen4D = pln.propOpt.scen4D;
+else
+    scen4D = 1; %Use only first 4D scenario for optimization
+end
+
+% Workaround until future release with consistent data management
+totNumCtScen = size(dij.physicalDose,1);
+
+% Validate / Create Scenario model
+if ~isfield(pln,'multScen')
+    pln.multScen = 'nomScen';
+end
+
+if ~isa(pln.multScen,'matRad_ScenarioModel')
+    pln.multScen = matRad_ScenarioModel.create(pln.multScen,struct('numOfCtScen',totNumCtScen));
+end
+
+if ~isfield(pln,'bioModel')
+    pln.bioModel = 'none';
+end
+
+if ~isa(pln.bioModel,'matRad_BiologicalModel')
+    pln.bioModel = matRad_BiologicalModel.validate(pln.bioModel,pln.radiationMode);
+end
+
+%If "all" provided, use all scenarios
+if isequal(scen4D,'all')
+    scen4D = 1:totNumCtScen;
+end
+
+if ~isfield(pln.propOpt, 'quantityOpt') || isempty(pln.propOpt.quantityOpt)
+    pln.propOpt.quantityOpt = pln.bioModel.defaultReportQuantity;
+    matRad_cfg.dispWarning('quantityOpt was not provided, using quantity suggested by biological model: %s',pln.propOpt.quantityOpt);
+end
+
+% Default quantity for objectives / constraints without explicit quantity
+defaultQuantity = pln.propOpt.quantityOpt;
+if strcmp(defaultQuantity,'RBExDose') && isa(pln.bioModel,'matRad_ConstantRBE')
+    defaultQuantity = 'constantRBExDose';
+end
+
+availableQuantities = matRad_OptimizationQuantity.getAvailableQuantities();
+if ~any(strcmp({availableQuantities.quantityName},defaultQuantity))
+    matRad_cfg.dispWarning('Did not recognize optimization quantity ''%s''! Using physical dose optimization!',defaultQuantity);
+    defaultQuantity = 'physicalDose';
+end
+
+% Instantiate the quantities found in the cst and prepare the dij for them
+backProjection = matRad_BackProjection();
+backProjection.defaultQuantity = defaultQuantity;
+backProjection.instantiateQuantities(cst);
+dij = backProjection.prepareDij(dij,cst);
+
+% calculate initial beam intensities wInit
+matRad_cfg.dispInfo('Estimating initial weights... ');
+
+if exist('wInit','var') && ~isempty(wInit)
+    %do nothing as wInit was passed to the function
+    matRad_cfg.dispInfo('chosen provided wInit!\n');
+else
+    wInit = matRad_initWeights(dij,cst,backProjection);
+end
+
+if any(~isfinite(wInit))
+    matRad_cfg.dispWarning('Invalid number in fluence weight initialization. Something might be off with your geometry. Setting invalid values to 1.');
+    wInit(~isfinite(wInit)) = 1;
+end
+
+linIxDIJ = find(~cellfun(@isempty,dij.physicalDose(scen4D,:,:)))';
+
+%Only select the indexes of the nominal ct Scenarios
+linIxDIJ_nominalCT = find(~cellfun(@isempty,dij.physicalDose(scen4D,1,1)))';
+
+FLAG_ROB_OPT = false;
+
+for i = 1:size(cst,1)
+    for j = 1:numel(cst{i,6})
+        if strcmp(cst{i,6}{j}.robustness,'PROB')
+            matRad_cfg.dispError('PROB robustness is currently not supported!');
+        end
+        if ~strcmp(cst{i,6}{j}.robustness,'none') && numel(linIxDIJ) > 1
+            FLAG_ROB_OPT = true;
+        end
+    end
+end
+
+% set optimization options
+if ~FLAG_ROB_OPT
+    ixForOpt = scen4D;
+else
+    ixForOpt = linIxDIJ;
+end
+
+%Give scenarios used for optimization
+backProjection.scenarios    = ixForOpt;
+backProjection.scenarioProb = pln.multScen.scenProb;
+backProjection.nominalCtScenarios = linIxDIJ_nominalCT;
+
+optiProb = matRad_OptimizationProblem(backProjection);
+
+if isfield(pln,'propOpt') && isfield(pln.propOpt,'useLogSumExpForRobOpt')
+    optiProb.useLogSumExpForRobOpt = pln.propOpt.useLogSumExpForRobOpt;
+end
+
+%Get Bounds
+if ~isfield(pln.propOpt,'boundMU')
+    pln.propOpt.boundMU = false;
+end
+
+if pln.propOpt.boundMU
+    if (isfield(dij,'minMU') || isfield(dij,'maxMU')) && ~isfield(dij,'numParticlesPerMU')
+        matRad_cfg.dispWarning('Requested MU bounds but number of particles per MU not set! Bounds will not be enforced and standard [0,Inf] will be used instead!');
+    elseif ~isfield(dij,'minMU') && ~isfield(dij,'maxMU')
+        matRad_cfg.dispWarning('Requested MU bounds but machine bounds not defined in dij.minMU & dij.maxMU! Bounds will not be enforced and standard [0,Inf] will be used instead!');
+    else
+        if isfield(dij,'minMU')
+            optiProb.minimumW = dij.numParticlesPerMU .* dij.minMU / 1e6;
+            matRad_cfg.dispInfo('Using lower MU bounds provided in dij!\n')
+        end
+
+        if isfield(dij,'maxMU')
+            optiProb.maximumW = dij.numParticlesPerMU .* dij.maxMU / 1e6;
+            matRad_cfg.dispInfo('Using upper MU bounds provided in dij!\n')
+        end
+    end
+else
+    matRad_cfg.dispInfo('Using standard MU bounds of [0,Inf]!\n')
+end
+
+end
+
+function wInit = matRad_initWeights(dij,cst,backProjection)
+% uniform initial weights scaled to the maximum target prescription
+
+matRad_cfg = MatRad_Config.instance();
+
+% quantities whose prescriptions are used for the weight scaling
+initQuantities = {'physicalDose','constantRBExDose','RBExDose','effect','BED'};
+
+% find target indices and described dose(s) for weight vector
+% initialization
+V          = [];
+doseTarget = [];
+ixTarget   = [];
+qTarget    = {};
+
+for i = 1:size(cst,1)
+    if isequal(cst{i,3},'TARGET') && ~isempty(cst{i,6})
+        V = [V;cst{i,4}{1}];
+
+        %Iterate through objectives/constraints
+        for fObjCell = cst{i,6}
+            quantityName = backProjection.getQuantityName(fObjCell{1});
+            if ~any(strcmp(quantityName,initQuantities))
+                continue;
+            end
+            dParams = fObjCell{1}.getDoseParameters();
+            %Don't care for Inf constraints
+            dParams = dParams(isfinite(dParams));
+            %Add do dose list
+            doseTarget = [doseTarget dParams];
+            ixTarget   = [ixTarget i*ones(1,numel(dParams))];
+            qTarget    = [qTarget repmat({quantityName},1,numel(dParams))];
+        end
+    end
+end
+
+wOnes = ones(dij.totalNumOfBixels,1);
+
+if isempty(doseTarget)
+    matRad_cfg.dispInfo('no target prescription found, chosen uniform weight of 1!\n');
+    wInit = wOnes;
+    return;
+end
+
+[doseTarget,i] = max(doseTarget);
+ixTarget       = ixTarget(i);
+quantityInit   = qTarget{i};
+
+doseTmp = dij.physicalDose{1}*wOnes;
+
+switch quantityInit
+    case 'constantRBExDose'
+        rbeDoseTmp  = dij.RBE .* doseTmp;
+        bixelWeight =  (doseTarget)/mean(rbeDoseTmp(V));
+        wInit       = wOnes * bixelWeight;
+        matRad_cfg.dispInfo('chosen uniform weight of %f!\n',bixelWeight);
+
+    case {'effect','RBExDose','BED'}
+        for i = 1:size(cst,1)
+            for j = 1:numel(cst{i,6})
+                % check if prescribed doses are in a valid domain
+                if any(cst{i,6}{j}.getDoseParameters() > 5) && isequal(cst{i,3},'TARGET')
+                    matRad_cfg.dispError('Reference dose > 5 Gy[RBE] for target. Biological optimization outside the valid domain of the base data. Reduce dose prescription or use more fractions.\n');
+                end
+            end
+        end
+
+        aTmp = backProjection.getQuantity('alphaDose').computeQuantity(dij,wOnes,1);
+        bTmp = backProjection.getQuantity('sqrtBetaDose').computeQuantity(dij,wOnes,1);
+
+        switch quantityInit
+            case 'effect'
+                effectTarget = cst{ixTarget,5}.alphaX * doseTarget + cst{ixTarget,5}.betaX * doseTarget^2;
+                p = sum(aTmp(V)) / sum(bTmp(V).^2);
+                q = -(effectTarget * length(V)) / sum(bTmp(V).^2);
+
+                wInit        = -(p/2) + sqrt((p^2)/4 -q) * wOnes;
+
+            case 'RBExDose'
+                % calculate current effect in target
+                CurrEffectTarget = aTmp(V) + bTmp(V).^2;
+                % ensure a underestimated biological effective dose
+                TolEstBio        = 1.2;
+                % calculate maximal RBE in target
+                maxCurrRBE = max(-cst{ixTarget,5}.alphaX + sqrt(cst{ixTarget,5}.alphaX^2 + ...
+                    4*cst{ixTarget,5}.betaX.*CurrEffectTarget)./(2*cst{ixTarget,5}.betaX*doseTmp(V)));
+                wInit    =  ((doseTarget)/(TolEstBio*maxCurrRBE*max(doseTmp(V))))* wOnes;
+
+            case 'BED'
+                abr = cst{ixTarget,5}.alphaX./cst{ixTarget,5}.betaX;
+                meanBED = mean((aTmp(V) + bTmp(V).^2)./cst{ixTarget,5}.alphaX);
+
+                BEDTarget = doseTarget.*(1 + doseTarget./abr);
+
+                bixelWeight =  BEDTarget/meanBED;
+                wInit       = wOnes * bixelWeight;
+        end
+
+        matRad_cfg.dispInfo('chosen weights adapted to biological dose calculation!\n');
+
+    otherwise
+        bixelWeight =  (doseTarget)/mean(doseTmp(V));
+        wInit       = wOnes * bixelWeight;
+        matRad_cfg.dispInfo('chosen uniform weight of %f!\n',bixelWeight);
+end
+
+end

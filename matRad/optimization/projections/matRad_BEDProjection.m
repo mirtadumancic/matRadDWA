@@ -1,5 +1,5 @@
-classdef matRad_BEDProjection < matRad_EffectProjection
-% matRad_BEDProjection class for BED-based optimization
+classdef matRad_BEDProjection < matRad_BackProjection
+% matRad_BEDProjection Deprecated. Use matRad_BackProjection with defaultQuantity 'BED'.
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -12,40 +12,18 @@ classdef matRad_BEDProjection < matRad_EffectProjection
 % propagated, or distributed except according to the terms contained in the 
 % LICENSE file.
 %
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     methods
         function obj = matRad_BEDProjection()
+            obj.defaultQuantity = 'BED';
+            obj.warnDeprecatedProjection();
         end
     end
 
-    methods
-        function BED = computeSingleScenario(obj,dij,scen,w)
-            %Get corresponding ct scenario
-            [ctScen,~,~] = ind2sub(size(dij.physicalDose),scen); %TODO: Workaround for now
-
-            effect = computeSingleScenario@matRad_EffectProjection(obj,dij,scen,w);
-            
-            BED = zeros(dij.doseGrid.numOfVoxels,1);
-            BED(dij.ixDose{ctScen}) = effect(dij.ixDose{ctScen})./ dij.ax{ctScen}(dij.ixDose{ctScen});
-            % photon equivalent BED = n * effect / alphax
-        end
-
-        function wGrad = projectSingleScenarioGradient(obj,dij,doseGrad,scen,w)
-            %Get corresponding ct scenario
-            [ctScen,~,~] = ind2sub(size(dij.physicalDose),scen); %TODO: Workaround for now
-
-            doseGradtmp{scen} = zeros(size(doseGrad{scen}));
-            doseGradtmp{scen}(dij.ixDose{ctScen}) = doseGrad{scen}(dij.ixDose{ctScen})./dij.ax{scen}(dij.ixDose{ctScen});
-            wGradEffect = projectSingleScenarioGradient@matRad_EffectProjection(obj,dij,doseGradtmp,scen,w);
-            wGrad = wGradEffect;
-        end
-    end
     methods (Static)
-        function optiFunc = setBiologicalDosePrescriptions(optiFunc,alphaX,betaX)
-            doses = optiFunc.getDoseParameters();    
-            BED = doses*(1 + doses/(alphaX/betaX));        
-            optiFunc = optiFunc.setDoseParameters(BED);
+        function optiFunc = setBiologicalDosePrescriptions(optiFunc, alphaX, betaX)
+            optiFunc = matRad_BED.setBiologicalDosePrescriptions(optiFunc, alphaX, betaX);
         end
     end
 end

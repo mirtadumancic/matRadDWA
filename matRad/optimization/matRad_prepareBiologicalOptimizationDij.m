@@ -1,13 +1,14 @@
-function dij = matRad_prepareBiologicalOptimizationDij(dij, cst, backProjection)
+function dij = matRad_prepareBiologicalOptimizationDij(dij, cst, computeGamma)
 % matRad_prepareBiologicalOptimizationDij prepares biological dij metadata
 %
 % call
-%   dij = matRad_prepareBiologicalOptimizationDij(dij,cst,backProjection)
+%   dij = matRad_prepareBiologicalOptimizationDij(dij,cst)
+%   dij = matRad_prepareBiologicalOptimizationDij(dij,cst,computeGamma)
 %
 % input
 %   dij:              matRad dij struct
 %   cst:              matRad cst struct on the dose grid
-%   backProjection:   matRad backprojection object
+%   computeGamma:     (optional) also compute dij.gamma = ax/(2bx), default false
 %
 % output
 %   dij:              dij with biological ax/bx, ixDose and gamma metadata
@@ -25,8 +26,8 @@ function dij = matRad_prepareBiologicalOptimizationDij(dij, cst, backProjection)
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-if ~isa(backProjection, 'matRad_EffectProjection')
-    return
+if nargin < 3
+    computeGamma = false;
 end
 
 matRad_cfg = MatRad_Config.instance();
@@ -60,7 +61,7 @@ for scenIx = 1:numOfCtScen
     dij.ixDose{scenIx} = dij.bx{scenIx} ~= 0;
 end
 
-if isa(backProjection, 'matRad_VariableRBEProjection')
+if computeGamma
     dij.gamma = cell(numOfCtScen, 1);
     for scenIx = 1:numOfCtScen
         dij.gamma{scenIx} = zeros(numOfVoxels, 1);

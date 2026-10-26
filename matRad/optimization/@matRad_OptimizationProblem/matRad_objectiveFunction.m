@@ -31,12 +31,9 @@ function f = matRad_objectiveFunction(optiProb,w,dij,cst)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 matRad_cfg = MatRad_Config.instance();
 
-% get current dose / effect / RBExDose vector
+% get current quantities, d.(quantityName){scen}
 optiProb.BP.compute(dij,w);
 d = optiProb.BP.GetResult();
-
-% get probabilistic quantities (nearly no overhead if empty)
-[dExp,dOmega] = optiProb.BP.GetResultProb();
 
 % get the used scenarios
 useScen  = optiProb.BP.scenarios;
@@ -44,8 +41,8 @@ scenProb = optiProb.BP.scenarioProb;
 useNominalCtScen = optiProb.BP.nominalCtScenarios;
 
 % retrieve matching 4D scenarios
-fullScen = cell(ndims(d),1);
-[fullScen{:}] = ind2sub(size(d),useScen);
+fullScen = cell(ndims(dij.physicalDose),1);
+[fullScen{:}] = ind2sub(size(dij.physicalDose),useScen);
 contourScen = fullScen{1};
 
 % initialize f
@@ -53,6 +50,9 @@ f = 0;
 
 % required for COWC opt
 f_COWC = zeros(numel(useScen),1);
+
+% min/max cache for voxel-wise worst case, per quantity
+dTmp = struct();
 
 % compute objective function for every VOI.
 for  i = 1:size(cst,1)
@@ -68,8 +68,11 @@ for  i = 1:size(cst,1)
             % only perform gradient computations for objectiveectives
             if isa(objective,'DoseObjectives.matRad_DoseObjective')
                 
-                % rescale dose parameters to biological optimization quantity if required
-                objective = optiProb.BP.setBiologicalDosePrescriptions(objective,cst{i,5}.alphaX,cst{i,5}.betaX);
+                quantityName = optiProb.BP.getQuantityName(objective);
+                dQ = d.(quantityName);
+
+                % rescale dose parameters to the optimization quantity if required
+                objective = optiProb.BP.getQuantity(quantityName).setBiologicalDosePrescriptions(objective,cst{i,5}.alphaX,cst{i,5}.betaX);
 
                 % retrieve the robustness type
                 robustness = objective.robustness;
@@ -77,7 +80,7 @@ for  i = 1:size(cst,1)
                 switch robustness
                     case 'none' % if conventional opt: just sum objectives of nominal dose
                         for ixScen = useNominalCtScen
-                            d_i = d{ixScen}(cst{i,4}{useScen(ixScen)});
+                            d_i = dQ{ixScen}(cst{i,4}{useScen(ixScen)});
                             f = f + objective.penalty * objective.computeDoseObjectiveFunction(d_i);
                         end
 
@@ -86,24 +89,14 @@ for  i = 1:size(cst,1)
                             ixScen = useScen(s);
                             ixContour = contourScen(s);
 
-                            d_i = d{ixScen}(cst{i,4}{ixContour});
+                            d_i = dQ{ixScen}(cst{i,4}{ixContour});
 
                             f   = f + scenProb(s) * objective.penalty*objective.computeDoseObjectiveFunction(d_i);
 
                         end
 
-                    case 'PROB' % if prob opt: sum up expectation value of objectives
-
-                        d_i = dExp{1}(cst{i,4}{1});
-
-                        f   = f +  objective.penalty*objective.computeDoseObjectiveFunction(d_i);
-
-                        p = objective.penalty/numel(cst{i,4}{1});
-
-                        % only one variance term per VOI
-                        if j == 1
-                            f = f + p * w' * dOmega{i,1};
-                        end
+                    case 'PROB'
+                        matRad_cfg.dispError('PROB robustness is currently not supported!');
 
                     case 'VWWC'  % voxel-wise worst case - takes minimum dose in TARGET and maximum in OAR
                         contourIx = unique(contourScen);
@@ -114,11 +107,11 @@ for  i = 1:size(cst,1)
                         end
 
                         % prepare min/max dose vector
-                        if ~exist('d_tmp','var')
-                            d_tmp = [d{useScen}];
+                        if ~isfield(dTmp,quantityName)
+                            dTmp.(quantityName) = [dQ{useScen}];
                         end
 
-                        d_Scen = d_tmp(cst{i,4}{contourIx},:);
+                        d_Scen = dTmp.(quantityName)(cst{i,4}{contourIx},:);
 
                         d_max = max(d_Scen,[],2);
                         d_min = min(d_Scen,[],2);
@@ -140,11 +133,11 @@ for  i = 1:size(cst,1)
                         end
 
                         % prepare min/max dose vector
-                        if ~exist('d_tmp','var')
-                            d_tmp = [d{useScen}];
+                        if ~isfield(dTmp,quantityName)
+                            dTmp.(quantityName) = [dQ{useScen}];
                         end
 
-                        d_Scen = d_tmp(cst{i,4}{contourIx},:);
+                        d_Scen = dTmp.(quantityName)(cst{i,4}{contourIx},:);
                         d_max = max(d_Scen,[],2);
                         d_min = min(d_Scen,[],2);
 
@@ -162,7 +155,7 @@ for  i = 1:size(cst,1)
                             ixScen = useScen(s);
                             ixContour = contourScen(s);
 
-                            d_i = d{ixScen}(cst{i,4}{ixContour});
+                            d_i = dQ{ixScen}(cst{i,4}{ixContour});
 
                             f_COWC(s) = f_COWC(s) + objective.penalty*objective.computeDoseObjectiveFunction(d_i);
                         end
@@ -175,7 +168,7 @@ for  i = 1:size(cst,1)
                             ixScen    = useScen(s);
                             ixContour = contourScen(s);
 
-                            d_i = d{ixScen}(cst{i,4}{ixContour});
+                            d_i = dQ{ixScen}(cst{i,4}{ixContour});
                             f_OWC(s) = objective.penalty*objective.computeDoseObjectiveFunction(d_i);
                         end
 

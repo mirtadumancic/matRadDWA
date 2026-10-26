@@ -1,144 +1,152 @@
 classdef matRad_BackProjection < handle
-% matRad_BackProjection superclass for all backprojection algorithms 
-% used within matRad optimzation processes
+% matRad_BackProjection manages the optimization quantities found in the
+% cst and the scenarios used during optimization
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Copyright 2019-2026 the matRad development team.
-% 
-% This file is part of the matRad project. It is subject to the license 
-% terms in the LICENSE file found in the top-level directory of this 
-% distribution and at https://github.com/e0404/matRad/LICENSE.md. No part 
-% of the matRad project, including this file, may be copied, modified, 
-% propagated, or distributed except according to the terms contained in the 
+%
+% This file is part of the matRad project. It is subject to the license
+% terms in the LICENSE file found in the top-level directory of this
+% distribution and at https://github.com/e0404/matRad/LICENSE.md. No part
+% of the matRad project, including this file, may be copied, modified,
+% propagated, or distributed except according to the terms contained in the
 % LICENSE file.
 %
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-   
+
     properties (SetAccess = protected)
-        wCache
-        wGradCache  %different cache for optimal performance (if multiple evaluations of objective but not gradient are required)
-        wGradCacheProb
-        d
-        wGrad
-        wGradProb
-        dExp
-        dOmegaV
+        quantities = struct()           % quantityName -> instance, including subquantities
+        optimizationQuantities = {}     % quantityNames used by objectives
+        constraintQuantities = {}       % quantityNames used by constraints
+        d                               % d.(quantityName){scen}
+        wGrad                           % objective gradient wrt w, summed over scenarios
     end
-    
-    properties 
-        dij                     %reference to matRad dij struct (to enable local changes)
+
+    properties
+        defaultQuantity = 'physicalDose' % used for objectives / constraints without quantity
         scenarios    = 1        %Scenario indices to evaluate (used for 4D & robust/stochastic optimization)
         scenarioProb = 1        %Probability associated with scenario (for stochastic optimization)
         nominalCtScenarios = 1; %nominal ct scenario (no shift, no range error) indices to evaluate (used for 4D & robust/stochastic optimization, when at least one cst structure does not have robustness)
     end
 
-    
     methods
         function obj = matRad_BackProjection()
-            obj.wCache = [];
-            obj.wGradCache = [];
-            obj.wGradCacheProb = [];
-            obj.d = [];
-            obj.dExp = [];
-            obj.dOmegaV = [];
-            obj.wGrad = [];            
-            obj.wGradProb = [];
-        end       
-        
-        function obj = compute(obj,dij,w)
-            if ~isequal(obj.wCache,w)
-                obj.d = obj.computeResult(dij,w);
-                [obj.dExp,obj.dOmegaV] = obj.computeResultProb(dij,w);
-                obj.wCache = w;                
+            obj.d = struct();
+            obj.wGrad = [];
+        end
+
+        function instantiateQuantities(this, cst)
+            this.quantities = struct();
+            optNames = {};
+            constrNames = {};
+            for i = 1:size(cst, 1)
+                for j = 1:numel(cst{i, 6})
+                    optiFunc = cst{i, 6}{j};
+                    if isa(optiFunc, 'DoseObjectives.matRad_DoseObjective')
+                        optNames{end + 1} = this.getQuantityName(optiFunc); %#ok<AGROW>
+                    elseif isa(optiFunc, 'DoseConstraints.matRad_DoseConstraint')
+                        constrNames{end + 1} = this.getQuantityName(optiFunc); %#ok<AGROW>
+                    end
+                end
+            end
+            this.optimizationQuantities = unique(optNames);
+            this.constraintQuantities = unique(constrNames);
+
+            cellfun(@(name) this.addQuantity(name), [this.optimizationQuantities this.constraintQuantities], 'UniformOutput', false);
+        end
+
+        function quantity = addQuantity(this, quantityName)
+            % Instantiates a quantity and its required subquantities
+            if ~isfield(this.quantities, quantityName)
+                quantity = matRad_OptimizationQuantity.create(quantityName);
+                if ~isa(quantity, 'matRad_DistributionQuantity')
+                    matRad_cfg = MatRad_Config.instance();
+                    matRad_cfg.dispError('Only distribution quantities are supported, ''%s'' is not!', quantityName);
+                end
+                for sub = quantity.requiredSubquantities
+                    quantity.subQuantities.(sub{1}) = this.addQuantity(sub{1});
+                end
+                this.quantities.(quantityName) = quantity;
+            end
+            quantity = this.quantities.(quantityName);
+        end
+
+        function quantityName = getQuantityName(this, optiFunc)
+            quantityName = optiFunc.quantity;
+            if isempty(quantityName)
+                quantityName = this.defaultQuantity;
             end
         end
-        
-        function obj = computeGradient(obj,dij,doseGrad,w)
-            if ~isequal(obj.wGradCache,w)
-                obj.wGrad = obj.projectGradient(dij,doseGrad,w);
-                obj.wGradCache = w;
+
+        function quantity = getQuantity(this, quantityNameOrOptiFunc)
+            if ischar(quantityNameOrOptiFunc)
+                quantityName = quantityNameOrOptiFunc;
+            else
+                quantityName = this.getQuantityName(quantityNameOrOptiFunc);
+            end
+            quantity = this.addQuantity(quantityName);
+        end
+
+        function dij = prepareDij(this, dij, cst)
+            for name = fieldnames(this.quantities)'
+                dij = this.quantities.(name{1}).prepareDij(dij, cst);
             end
         end
-        
-        function obj = computeGradientProb(obj,dij,doseGrad,vOmegaGrad,w)
-            if ~isequal(obj.wGradCacheProb,w)
-                obj.wGradProb = obj.projectGradientProb(dij,doseGrad,vOmegaGrad,w);
-                obj.wGradCacheProb = w;
+
+        function obj = compute(obj, dij, w)
+            obj.d = struct();
+            for name = unique([obj.optimizationQuantities obj.constraintQuantities])
+                quantity = obj.quantities.(name{1});
+                dQuantity = cell(size(dij.physicalDose));
+                for scen = obj.scenarios
+                    dQuantity{scen} = quantity.getResult(dij, w, scen);
+                end
+                obj.d.(name{1}) = dQuantity;
             end
         end
-        
+
+        function obj = computeGradient(obj, dij, fGrad, w)
+            % fGrad.(quantityName){scen}: objective gradient wrt the quantity
+            obj.wGrad = zeros(dij.totalNumOfBixels, 1);
+            for name = fieldnames(fGrad)'
+                quantity = obj.quantities.(name{1});
+                for scen = obj.scenarios
+                    if scen <= numel(fGrad.(name{1})) && ~isempty(fGrad.(name{1}){scen})
+                        obj.wGrad = obj.wGrad + quantity.projectGradient(dij, fGrad.(name{1}){scen}, w, scen);
+                    end
+                end
+            end
+        end
+
         function d = GetResult(obj)
             d = obj.d;
-        end
-        
-        function [dExp,dOmegaV] = GetResultProb(obj)
-            dExp = obj.dExp;
-            dOmegaV = obj.dOmegaV;
         end
 
         function wGrad = GetGradient(obj)
             wGrad = obj.wGrad;
         end
-        
-        function wGrad = GetGradientProb(obj)
-            wGrad = obj.wGradProb;
+
+        % Deprecated single-scenario interface, evaluates defaultQuantity
+        function d = computeSingleScenario(obj, dij, scen, w)
+            d = obj.getQuantity(obj.defaultQuantity).computeQuantity(dij, w, scen);
         end
-        
-        function d = computeResult(obj,dij,w)
-            d = cell(size(dij.physicalDose));
-            d(obj.scenarios) = arrayfun(@(scen) computeSingleScenario(obj,dij,scen,w),obj.scenarios,'UniformOutput',false);
-        end
-        
-        function [dExp,dOmegaV] = computeResultProb(obj,dij,w)
-            if isfield(dij,'physicalDoseExp')
-                dExp = cell(size(dij.physicalDoseExp));
-                [dExp(obj.scenarios),dOmegaVTmp] = arrayfun(@(scen) computeSingleScenarioProb(obj,dij,scen,w),obj.scenarios,'UniformOutput',false);
-                dOmegaV = cell(size(dij.physicalDoseOmega));
-                dOmegaV(:,obj.scenarios) = dOmegaVTmp{:};
-            else
-                dExp = [];
-                dOmegaV = [];
-            end
-        end
-        
-        function wGrad = projectGradient(obj,dij,doseGrad,w)
-            wGrad = cell(size(dij.physicalDose));
-            wGrad(obj.scenarios) = arrayfun(@(scen) projectSingleScenarioGradient(obj,dij,doseGrad,scen,w),obj.scenarios,'UniformOutput',false);         
-        end
-        
-        function wGrad = projectGradientProb(obj,dij,dExpGrad,dOmegaVgrad,w)
-            wGrad = cell(size(dij.physicalDose));
-            wGrad(obj.scenarios) = arrayfun(@(scen) projectSingleScenarioGradientProb(obj,dij,dExpGrad,dOmegaVgrad,scen,w),obj.scenarios,'UniformOutput',false);
+
+        function wGrad = projectSingleScenarioGradient(obj, dij, doseGrad, scen, w)
+            wGrad = obj.getQuantity(obj.defaultQuantity).projectGradient(dij, doseGrad{scen}, w, scen);
         end
     end
-   
-    
-    %These should be abstract methods, however Octave can't parse them. As soon 
-    %as Octave is able to do this, they should be made abstract again 
-    methods %(Abstract)
-        function d = computeSingleScenario(obj,dij,scen,w)
-            error('Function needs to be implemented');
-        end
-        
-        function wGrad = projectSingleScenarioGradient(obj,dij,doseGrad,scen,w)
-            error('Function needs to be implemented');
-        end
-        
-        function [dExp,dOmegaV] = computeSingleScenarioProb(obj,dij,scen,w)
-            %warning('');
-        end
-        
-        function [dExp,dOmegaV] = projectSingleScenarioGradientProb(obj,dij,dExpGrad,dOmegaVgrad,scen,w)
-            %warning('');
+
+    methods (Access = protected)
+        function warnDeprecatedProjection(obj)
+            matRad_cfg = MatRad_Config.instance();
+            matRad_cfg.dispDeprecationWarning('%s is deprecated. Use matRad_BackProjection with defaultQuantity ''%s'' or set the quantity of the objectives.', class(obj), obj.defaultQuantity);
         end
     end
-    
+
     methods (Static)
-        function optiFunc = setBiologicalDosePrescriptions(optiFunc,alphaX,betaX)
-            %Does nothing in a usual normal setting but return the original
-            %optiFunc
+        % Deprecated, use the setBiologicalDosePrescriptions of the quantity
+        function optiFunc = setBiologicalDosePrescriptions(optiFunc, ~, ~)
         end
     end
 end
-
