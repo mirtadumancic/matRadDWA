@@ -469,29 +469,33 @@ classdef matRad_MCemittanceBaseData
 
             % fitting for either matlab or octave
             if ~obj.matRad_cfg.isOctave
-                funcs.objective = @(x) sum(qRes(x(1), x(2)).^2);
-                funcs.gradient  = @(x) [  2 * sum(qRes(x(1), x(2)) .* (2 * sigmaSqIso * x(2) * z));
-                    2 * sum(qRes(x(1), x(2)) .* (2 * sigmaSqIso * x(1) * z  - 2 * x(2) * z.^2))];
-                
-                options.lb = [-0.99, -Inf];
-                options.ub = [ 0.99,  Inf];
-                
-                options.ipopt.hessian_approximation = 'limited-memory';
-                options.ipopt.limited_memory_update_type = 'bfgs';
-                
-                %Set Default Options
-                if obj.matRad_cfg.logLevel <= 1
-                    lvl = 0;
-                else
-                    lvl = 1;
-                end
-                options.ipopt.print_level = lvl;
-                
+                % PATCHED: fmincon instead of ipopt (no compiled IPOPT MEX
+                % available for this platform/architecture). fmincon
+                % reuses the exact same objective, analytic gradient, and
+                % bound constraints (-0.99 <= rho <= 0.99) that were
+                % originally passed to ipopt, so this is a close,
+                % faithful substitute rather than an approximation.
+                objFun = @(x) deal( sum(qRes(x(1), x(2)).^2), ...
+                    [ 2 * sum(qRes(x(1), x(2)) .* (2 * sigmaSqIso * x(2) * z));
+                      2 * sum(qRes(x(1), x(2)) .* (2 * sigmaSqIso * x(1) * z  - 2 * x(2) * z.^2)) ] );
+
+                lb = [-0.99; -Inf];
+                ub = [ 0.99;  Inf];
                 start = [0.9; 0.1];
-                [result, ~] = ipopt (start, funcs, options);
+
+                if obj.matRad_cfg.logLevel <= 1
+                    dispOpt = 'off';
+                else
+                    dispOpt = 'iter';
+                end
+
+                fminconOpts = optimoptions('fmincon', 'Algorithm','interior-point', ...
+                    'SpecifyObjectiveGradient', true, 'Display', dispOpt);
+
+                [result, ~] = fmincon(objFun, start, [], [], [], [], lb, ub, [], fminconOpts);
                 rho    = result(1);
                 sigmaT = result(2);
-                
+
             else
                 phi{1} = @(x) sum(qRes(x(1), x(2)).^2);
                 phi{2} = @(x) [  2 * sum(qRes(x(1), x(2)) .* (2 * sigmaSqIso * x(2) * z));
