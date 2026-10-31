@@ -1,0 +1,39 @@
+# WaterPhantom used in some demonstrations.
+# 40cm long, 20 cm in x, 20 cm in y
+
+includeFile = ConstantsForNozzles.txt
+
+# Water Tank / Phantom
+s:Ge/WaterPhantom/Parent 		= "Gantry"
+s:Ge/WaterPhantom/Type   		= "TsBox"
+s:Ge/WaterPhantom/Material		= "G4_WATER"
+d:Ge/WaterPhantom/HLX 			= 20.0 cm
+d:Ge/WaterPhantom/HLY 			= 20.0 cm
+d:Ge/WaterPhantom/HLZ 			= 20.0 cm
+d:Ge/WaterPhantom/TransX		= 0.0 cm
+d:Ge/WaterPhantom/TransY		= 0.0 cm
+d:Ge/WaterPhantom/TransZ		= 0.0 cm
+d:Ge/WaterPhantom/RotX			= 0. deg
+d:Ge/WaterPhantom/RotY			= 0. deg
+d:Ge/WaterPhantom/RotZ			= 0. deg
+d:Ge/WaterPhantom/MaxStepSize 	= 0.5 mm
+
+s:Ge/ScoringXatDmax/Parent	    = "WaterPhantom"
+s:Ge/ScoringXatDmax/Type		= "TsBox"
+s:Ge/ScoringXatDmax/Material	= "Air"
+d:Ge/ScoringXatDmax/HLX		    = Ge/WaterPhantom/HLX cm
+d:Ge/ScoringXatDmax/HLY		    = 1.0 cm
+d:Ge/ScoringXatDmax/HLZ		    = 1.0 cm
+d:Ge/ScoringXatDmax/TransX	    = 0. cm
+d:Ge/ScoringXatDmax/TransY	    = 0. cm
+d:Ge/ScoringXatDmax/TransZ	    = 17.9 cm
+d:Ge/ScoringXatDmax/RotX		= 0. deg
+d:Ge/ScoringXatDmax/RotY		= 0. deg
+d:Ge/ScoringXatDmax/RotZ		= 0. deg
+s:Ge/ScoringXatDmax/Color		= "red"
+i:Ge/ScoringXatDmax/XBins		= 400
+
+s:Sc/ScoringXatDmax/Quantity                  = "DoseToMedium"
+s:Sc/ScoringXatDmax/Component                 = "ScoringXatDmax"
+b:Sc/ScoringXatDmax/OutputToConsole           = "False"
+s:Sc/ScoringXatDmax/IfOutputFileAlreadyExists = "Overwrite"
