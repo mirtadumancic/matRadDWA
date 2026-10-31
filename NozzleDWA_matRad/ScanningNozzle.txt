@@ -1,0 +1,198 @@
+# Scanning nozzle used in some demonstrations.
+
+includeFile = ConstantsForNozzles.txt
+
+#Ts/DumpParameters = "T"
+
+########################################
+#1. Beam Exit Window
+#100 um thickness Mylar window
+########################################
+s:Ge/ExitWindow/Parent       = "Gantry"
+s:Ge/ExitWindow/Type         = "TsCylinder"
+s:Ge/ExitWindow/Material     = "Mylar"
+d:Ge/ExitWindow/RMin         = 0.0  mm
+d:Ge/ExitWindow/RMax         = 50.0 mm
+d:Ge/ExitWindow/HL           = 0.05 mm
+d:Ge/ExitWindow/SPhi         = 0.0   deg
+d:Ge/ExitWindow/DPhi         = 360.0 deg
+d:Ge/ExitWindow/TransX       = 0.0 mm
+d:Ge/ExitWindow/TransY       = 0.0 mm
+d:Ge/ExitWindow/TransZ       = 299.8 cm
+d:Ge/ExitWindow/RotX         = 0.0 deg
+d:Ge/ExitWindow/RotY         = 0.0 deg
+d:Ge/ExitWindow/RotZ         = 0.0 deg
+b:Ge/ExitWindow/Include      = "TRUE"
+s:Ge/ExitWindow/DrawingStyle = "Solid"
+
+d:Ge/DistanceOf_CenterExitWindow_To_TopMon1 = -30.0 mm
+d:Ge/ZPlusOf_Mon1 = Ge/ExitWindow/TransZ + Ge/DistanceOf_CenterExitWindow_To_TopMon1 cm
+
+########################################
+#2. Monitor chamber 1.
+# Filled with Nitrogen Gas, 3 layers
+# Thickness, position, Material
+#            1.0       Gold
+#            0.0 	   Aluminum
+#           -1.0       Gold
+########################################
+s:Ge/MonitorChamber1/Parent   = "Gantry"
+s:Ge/MonitorChamber1/Type     = "TsCylinder"
+s:Ge/MonitorChamber1/Material = "NiGas"
+d:Ge/MonitorChamber1/RMin     = 0.0   mm
+d:Ge/MonitorChamber1/RMax     = 100.0 mm
+d:Ge/MonitorChamber1/HL       = 15.0  mm
+d:Ge/MonitorChamber1/SPhi     = 0.0   deg
+d:Ge/MonitorChamber1/DPhi     = 360.0 deg
+d:Ge/MonitorChamber1/RotX     = 0.0 deg
+d:Ge/MonitorChamber1/RotY     = 0.0 deg
+d:Ge/MonitorChamber1/RotZ     = 0.0 deg
+d:Ge/MonitorChamber1/TransX   = 0.0 mm
+d:Ge/MonitorChamber1/TransY   = 0.0 mm
+d:Ge/MonitorChamber1/TransZ   = Ge/ZPlusOf_Mon1 - Ge/MonitorChamber1/HL mm
+b:Ge/MonitorChamber1/Include  = "TRUE"
+
+s:Ge/MonitorChamber1/Layer1/Parent   = "MonitorChamber1"
+s:Ge/MonitorChamber1/Layer1/Type     = "TsCylinder"
+s:Ge/MonitorChamber1/Layer1/Material = "Gold"
+d:Ge/MonitorChamber1/Layer1/RMin     = 0.0   mm
+d:Ge/MonitorChamber1/Layer1/RMax     = 90.0 mm
+d:Ge/MonitorChamber1/Layer1/HL       = 0.002  mm
+d:Ge/MonitorChamber1/Layer1/SPhi     = 0.0   deg
+d:Ge/MonitorChamber1/Layer1/DPhi     = 360.0 deg
+d:Ge/MonitorChamber1/Layer1/RotX     = 0.0 deg
+d:Ge/MonitorChamber1/Layer1/RotY     = 0.0 deg
+d:Ge/MonitorChamber1/Layer1/RotZ     = 0.0 deg
+d:Ge/MonitorChamber1/Layer1/TransX   = 0.0 mm
+d:Ge/MonitorChamber1/Layer1/TransY   = 0.0 mm
+d:Ge/MonitorChamber1/Layer1/TransZ   = 10.0  mm
+b:Ge/MonitorChamber1/Layer1/Include  = "TRUE"
+
+s:Ge/MonitorChamber1/Layer2/Parent   = "MonitorChamber1"
+s:Ge/MonitorChamber1/Layer2/Type     = "TsCylinder"
+s:Ge/MonitorChamber1/Layer2/Material = "Aluminum"
+d:Ge/MonitorChamber1/Layer2/RMin     = 0.0   mm
+d:Ge/MonitorChamber1/Layer2/RMax     = 90.0 mm
+d:Ge/MonitorChamber1/Layer2/HL       = 0.003  mm
+d:Ge/MonitorChamber1/Layer2/SPhi     = 0.0   deg
+d:Ge/MonitorChamber1/Layer2/DPhi     = 360.0 deg
+d:Ge/MonitorChamber1/Layer2/RotX     = 0.0 deg
+d:Ge/MonitorChamber1/Layer2/RotY     = 0.0 deg
+d:Ge/MonitorChamber1/Layer2/RotZ     = 0.0 deg
+d:Ge/MonitorChamber1/Layer2/TransX   = 0.0 mm
+d:Ge/MonitorChamber1/Layer2/TransY   = 0.0 mm
+d:Ge/MonitorChamber1/Layer2/TransZ   = 0.0  mm
+b:Ge/MonitorChamber1/Layer2/Include  = "TRUE"
+
+s:Ge/MonitorChamber1/Layer3/Parent   = "MonitorChamber1"
+s:Ge/MonitorChamber1/Layer3/Type     = "TsCylinder"
+s:Ge/MonitorChamber1/Layer3/Material = "Gold"
+d:Ge/MonitorChamber1/Layer3/RMin     = 0.0   mm
+d:Ge/MonitorChamber1/Layer3/RMax     = 90.0 mm
+d:Ge/MonitorChamber1/Layer3/HL       = 0.003  mm
+d:Ge/MonitorChamber1/Layer3/SPhi     = 0.0   deg
+d:Ge/MonitorChamber1/Layer3/DPhi     = 360.0 deg
+d:Ge/MonitorChamber1/Layer3/RotX     = 0.0 deg
+d:Ge/MonitorChamber1/Layer3/RotY     = 0.0 deg
+d:Ge/MonitorChamber1/Layer3/RotZ     = 0.0 deg
+d:Ge/MonitorChamber1/Layer3/TransX   = 0.0 mm
+d:Ge/MonitorChamber1/Layer3/TransY   = 0.0 mm
+d:Ge/MonitorChamber1/Layer3/TransZ   = -10.0  mm
+b:Ge/MonitorChamber1/Layer3/Include  = "TRUE"
+
+#Distance calculation for Pipe
+d:Ge/DistanceOf_BottomMon1_To_TopPipe = -20.0 mm
+d:Ge/ZMinusOf_Mon1  = Ge/MonitorChamber1/TransZ - Ge/MonitorChamber1/HL mm
+d:Ge/ZPlusOf_Pipe   = Ge/ZMinusOf_Mon1 + Ge/DistanceOf_BottomMon1_To_TopPipe mm
+
+############################################
+# Quad/Dipole Field specification in length
+############################################
+#Gap      Quad1   Gap   Quad2  Gap
+#2.0 cm + 5.0*2 + 4.0 + 5.0*2 + 2.0 = 28.0 cm
+d:Ge/HLOf_PipeInQuads = 14.0 cm
+d:Ge/HLOf_Quad1       = 5.0 cm
+d:Ge/HLOf_Quad2       = Ge/HLOf_Quad1 cm
+d:Ge/Gap_Top_Quad1    = 2.0 cm
+d:Ge/Gap_Quad1_Quad2  = 4.0 cm
+d:Ge/Gap_Quad2_Bottom = 2.0 cm
+
+d:Ge/HLxyOf_Quads         = 47.0 mm
+d:Ge/HLxyOf_Dipoles       = 77.0 mm
+d:Ge/ThicknessOf_Pipe     =  3.0 mm
+s:Ge/MaterialOf_PipeWall  = "Aluminum"
+s:Ge/MaterialOf_PipeGas   = "HeGas"
+#s:Ge/MaterialOf_PipeGas   = "Vacuum"
+
+d:Ge/FLOf_PipeConnector   = 10.0 cm
+
+d:Ge/HLOf_Dipole1                                   = 10.5 cm
+d:Ge/HLOf_Dipole2                                   = 13.0 cm
+d:Ge/DistanceOf_Coil1_Dipole1                       = 6.0 cm
+d:Ge/DistanceOf_Coil2_Dipole2                       = 8.0 cm
+d:Ge/DistanceOf_BottomDipoleCoil1_To_TopDipoleCoil2 = 1.0 cm
+d:Ge/DistanceOf_BottomPipe_To_TopBPM1               = -1.0 mm
+d:Ge/DistanceOf_BottomBPM1_To_PipeExtension         = -0.0 mm
+d:Ge/DistanceOf_BottomPipeExtension_To_BPM2         = -0.0 mm
+
+#########################################################
+#Calculated parameters from input
+#Don't modify following calculations
+
+d:Ge/HLOf_DipoleCoil1             = Ge/HLOf_Dipole1 + Ge/DistanceOf_Coil1_Dipole1 cm
+d:Ge/HLOf_DipoleCoil2             = Ge/HLOf_Dipole2 + Ge/DistanceOf_Coil2_Dipole2 cm
+
+d:Ge/FLOf_DipoleCoil1             = Ge/HLOf_DipoleCoil1 cm * 2.0
+d:Ge/FLOf_DipoleCoil2             = Ge/HLOf_DipoleCoil2 cm * 2.0
+d:Ge/FLOf_DipoleCoil1_DipoleCoil2 = Ge/FLOf_DipoleCoil1 + Ge/FLOf_DipoleCoil2  cm
+
+d:Ge/FLOf_PipeInQuads             = 2.0 * Ge/HLOf_PipeInQuads cm
+
+d:Ge/HLOf_PipeConnector           = Ge/FLOf_PipeConnector cm * 0.5
+
+d:Ge/FLOf_PipeInDipoles           = Ge/FLOf_DipoleCoil1_DipoleCoil2 + Ge/DistanceOf_BottomDipoleCoil1_To_TopDipoleCoil2 cm
+d:Ge/HLOf_PipeInDipoles           = Ge/FLOf_PipeInDipoles cm * 0.5
+
+d:Ge/FLOf_QuadsDipoles            = Ge/FLOf_PipeInDipoles + Ge/FLOf_PipeInQuads cm
+
+d:Ge/FLOf_Pipe                    = Ge/FLOf_QuadsDipoles  + Ge/FLOf_PipeConnector cm
+d:Ge/HLOf_Pipe                    = Ge/FLOf_Pipe cm * 0.5
+########################################################
+
+########################################
+# Pipe through Quads/Dipoles/
+########################################
+s:Ge/BeamPipeInQuadsDipoles/Parent = "Gantry"
+s:Ge/BeamPipeInQuadsDipoles/Type   = "Group"
+d:Ge/BeamPipeInQuadsDipoles/TransX = 0. m
+d:Ge/BeamPipeInQuadsDipoles/TransY = 0. m
+d:Ge/BeamPipeInQuadsDipoles/TransZ = Ge/ZPlusOf_Pipe - Ge/HLOf_Pipe mm
+d:Ge/BeamPipeInQuadsDipoles/RotX   = 0. deg
+d:Ge/BeamPipeInQuadsDipoles/RotY   = 0. deg
+d:Ge/BeamPipeInQuadsDipoles/RotZ   = 0. deg
+
+s:Ge/PipeInQuads/Parent   = "BeamPipeInQuadsDipoles"
+s:Ge/PipeInQuads/Type     = "TsBox"
+s:Ge/PipeInQuads/Material = Ge/MaterialOf_PipeWall
+d:Ge/PipeInQuads/HLX      = Ge/HLxyOf_Quads + Ge/ThicknessOf_Pipe mm
+d:Ge/PipeInQuads/HLY      = Ge/HLxyOf_Quads + Ge/ThicknessOf_Pipe mm
+d:Ge/PipeInQuads/HLZ      = Ge/HLOf_PipeInQuads cm
+d:Ge/PipeInQuads/TransX   = 0.0 mm
+d:Ge/PipeInQuads/TransY   = 0.0 mm
+d:Ge/PipeInQuads/TransZ   = Ge/HLOf_Pipe -  Ge/HLOf_PipeInQuads  cm
+d:Ge/PipeInQuads/RotX     = 0.0 deg
+d:Ge/PipeInQuads/RotY     = 0.0 deg
+d:Ge/PipeInQuads/RotZ     = 0.0 deg
+
+s:Ge/PipeInQuads/Gas/Parent   = "PipeInQuads"
+s:Ge/PipeInQuads/Gas/Type     = "TsBox"
+s:Ge/PipeInQuads/Gas/Material = Ge/MaterialOf_PipeGas
+d:Ge/PipeInQuads/Gas/HLX      = Ge/HLxyOf_Quads   mm
+d:Ge/PipeInQuads/Gas/HLY      = Ge/HLxyOf_Quads  mm
+d:Ge/PipeInQuads/Gas/HLZ      = Ge/PipeInQuads/HLZ cm
+d:Ge/PipeInQuads/Gas/TransX   = 0.0 mm
+d:Ge/PipeInQuads/Gas/TransY   = 0.0 mm
+d:Ge/PipeInQuads/Gas/TransZ   = 0.0 mm
+d:Ge/PipeInQuads/Gas/RotX     = 0.0 deg
+d:Ge/PipeInQuads/Gas/RotY     = 0.0 deg
+d:Ge/PipeInQuads/Gas/RotZ     = 0.0 deg
