@@ -1,0 +1,11 @@
+2026-10-28 18:37  run 1/5 start: locations {'posterior'}, LET weights [0 0.1 0.3 1], coverage 1000, MC [], tag '_cov'
+2026-10-29 01:07  run 1 done
+2026-10-29 01:07  run 2/5 start: locations {'oblique'}, LET weights [0 0.1 0.3 1], coverage 1000, MC [], tag '_cov'
+2026-10-29 01:21  run 2 done
+2026-10-29 01:21  run 3/5 start: locations {'anterior'}, LET weights [0 0.1 0.3 1], coverage 1000, MC [], tag '_cov'
+2026-10-29 01:25  run 3 done
+2026-10-29 01:25  run 4/5 start: locations {'center'}, LET weights [0 0.3], coverage 1000, MC [0 0.3], tag '_covMC'
+2026-10-29 01:35  run 4 done
+2026-10-29 01:35  run 5/5 start: locations {'posterior'}, LET weights [0 0.3], coverage 1000, MC [0 0.3], tag '_covMC'
+2026-10-29 03:57  run 5 done
+2026-10-29 03:57  queue finished
