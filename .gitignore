@@ -8,3 +8,7 @@ coverage.json
 build/
 .doc/
 
+
+# letAgent outputs (may contain patient-derived data; never commit)
+letAgent_runs*/
+__pycache__/

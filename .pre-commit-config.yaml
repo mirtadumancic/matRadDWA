@@ -49,3 +49,12 @@ repos:
       files: \.m$
       language: python
       additional_dependencies: [miss_hit]
+
+  - repo: local
+    hooks:
+    - id: letagent-guard
+      name: letAgent patient-data guard
+      entry: python3 letAgent/tools/git_guard.py
+      language: system
+      pass_filenames: false
+      always_run: true

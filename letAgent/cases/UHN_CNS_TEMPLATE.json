@@ -1,0 +1,112 @@
+{
+  "_readme": "Copy this file per patient to hospital storage OUTSIDE the code repository and outside any folder connected to an AI assistant. Use a study code as alias (never name, MRN or dates). source.path and workDir must be on hospital storage too; letAgent refuses to run otherwise. Structure names must match the cst exactly (case-insensitive).",
+  "alias": "CNS_01",
+  "dataClass": "patient",
+  "reb": {
+    "protocol": "REB-XX-XXXX"
+  },
+  "workDir": "D:/letAgent_runs",
+  "source": {
+    "type": "matFile",
+    "path": "D:/letAgent_cases/CNS_01.mat"
+  },
+  "machine": "DWA_proton_v2",
+  "prescription": {
+    "totalDoseGy": 54,
+    "numOfFractions": 30
+  },
+  "structures": {
+    "targets": [
+      {
+        "name": "CTV",
+        "doseGy": 54,
+        "penalty": 800
+      }
+    ],
+    "oars": [
+      {
+        "name": "Brainstem",
+        "maxDoseGy": 54,
+        "penalty": 300,
+        "let": true,
+        "hardLimit": true
+      },
+      {
+        "name": "Chiasm",
+        "maxDoseGy": 54,
+        "penalty": 200,
+        "let": true,
+        "hardLimit": true
+      },
+      {
+        "name": "BODY",
+        "maxDoseGy": 30,
+        "penalty": 100,
+        "meanDosePenalty": 50
+      }
+    ]
+  },
+  "beamSets": [
+    {
+      "id": "clinical",
+      "gantryAngles": [
+        90,
+        270
+      ],
+      "couchAngles": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "alt1",
+      "gantryAngles": [
+        0,
+        90
+      ],
+      "couchAngles": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "alt2",
+      "gantryAngles": [
+        45,
+        315,
+        0
+      ],
+      "couchAngles": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "stf": {
+    "bixelWidth": 3,
+    "longitudinalSpotSpacing": 2
+  },
+  "doseGridMm": 3,
+  "robustness": {
+    "scenarios": "wcScen",
+    "shiftSDmm": [
+      2,
+      2,
+      2
+    ],
+    "rangeRelSDpct": 3.5,
+    "rangeAbsSDmm": 1
+  },
+  "metrics": {
+    "dirtyDoseLETThreshold": 2.0,
+    "letdMinDoseGy": 1.0,
+    "letVolume": {
+      "minDoseGy": 30,
+      "minLETd": 2.5
+    }
+  },
+  "engine": {
+    "maxIter": 500
+  }
+}

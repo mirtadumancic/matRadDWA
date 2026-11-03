@@ -1,0 +1,79 @@
+{
+  "alias": "TG119_DWA",
+  "dataClass": "public",
+  "source": {
+    "type": "matRadPhantom",
+    "name": "TG119.mat"
+  },
+  "machine": "DWA_proton_v2",
+  "prescription": {
+    "totalDoseGy": 60,
+    "numOfFractions": 30
+  },
+  "structures": {
+    "targets": [
+      {
+        "name": "OuterTarget",
+        "doseGy": 60,
+        "penalty": 800
+      }
+    ],
+    "oars": [
+      {
+        "name": "Core",
+        "maxDoseGy": 30,
+        "penalty": 100,
+        "let": true
+      },
+      {
+        "name": "BODY",
+        "maxDoseGy": 30,
+        "penalty": 100,
+        "meanDosePenalty": 100
+      }
+    ]
+  },
+  "beamSets": [
+    {
+      "id": "A",
+      "gantryAngles": [
+        45,
+        315
+      ]
+    },
+    {
+      "id": "B",
+      "gantryAngles": [
+        0,
+        90
+      ]
+    },
+    {
+      "id": "C",
+      "gantryAngles": [
+        315,
+        0,
+        45
+      ]
+    }
+  ],
+  "stf": {
+    "bixelWidth": 3,
+    "longitudinalSpotSpacing": 2
+  },
+  "doseGridMm": 3,
+  "robustness": {
+    "scenarios": "nomScen"
+  },
+  "metrics": {
+    "dirtyDoseLETThreshold": 2.0,
+    "letdMinDoseGy": 1.0,
+    "letVolume": {
+      "minDoseGy": 20,
+      "minLETd": 2.5
+    }
+  },
+  "engine": {
+    "maxIter": 500
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "alias": "CNSstress_gap2",
+  "dataClass": "synthetic",
+  "source": {
+    "type": "synthetic",
+    "name": "cnsStress",
+    "gapMm": 2,
+    "targetRadiusMm": 15,
+    "resolutionMm": 3
+  },
+  "machine": "DWA_proton_v2",
+  "prescription": {
+    "totalDoseGy": 54,
+    "numOfFractions": 30
+  },
+  "structures": {
+    "targets": [
+      {
+        "name": "PTV",
+        "doseGy": 54,
+        "penalty": 800
+      }
+    ],
+    "oars": [
+      {
+        "name": "Brainstem",
+        "maxDoseGy": 54,
+        "penalty": 300,
+        "let": true,
+        "hardLimit": true
+      },
+      {
+        "name": "BODY",
+        "maxDoseGy": 30,
+        "penalty": 100,
+        "meanDosePenalty": 50
+      }
+    ]
+  },
+  "beamSets": [
+    {
+      "id": "lateralPair",
+      "gantryAngles": [
+        90,
+        270
+      ]
+    },
+    {
+      "id": "awayFromBS",
+      "gantryAngles": [
+        0,
+        45
+      ]
+    },
+    {
+      "id": "threeField",
+      "gantryAngles": [
+        0,
+        90,
+        270
+      ]
+    }
+  ],
+  "stf": {
+    "bixelWidth": 3,
+    "longitudinalSpotSpacing": 2
+  },
+  "doseGridMm": 3,
+  "robustness": {
+    "scenarios": "wcScen",
+    "shiftSDmm": [
+      3,
+      3,
+      3
+    ],
+    "rangeRelSDpct": 3.5,
+    "rangeAbsSDmm": 1
+  },
+  "metrics": {
+    "dirtyDoseLETThreshold": 2.0,
+    "letdMinDoseGy": 1.0,
+    "letVolume": {
+      "minDoseGy": 30,
+      "minLETd": 2.5
+    }
+  },
+  "engine": {
+    "maxIter": 500
+  },
+  "workDir": "../../letAgent_runs_mock"
+}

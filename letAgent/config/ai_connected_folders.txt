@@ -1,0 +1,6 @@
+# Folders that an AI assistant can read (e.g. folders connected to Claude on Mirta's Mac).
+# letAgent refuses to run a PATIENT case whose case file, source data or workDir is inside
+# any of these folders or inside the code repository itself. One path per line; ~ = home.
+# Add a folder here whenever you connect a new one to an AI tool.
+~/Desktop/Agent-LET-optimizer
+~/Work/MATLAB_Projects/matRadDWA
