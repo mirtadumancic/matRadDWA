@@ -30,7 +30,9 @@ function [sigmaIni] = matRad_calcSigmaIni(baseData,rays,SSD)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Finds the energies involved in the process and their focus index
-[energyVec,uniqueEnergyIdx] = unique([rays.energy]);
+% (DWA project fix, Oct 28 2026) keep the map back to all energies: with a range
+% shifter the same energy can appear twice in a ray (with and without shifter)
+[energyVec,uniqueEnergyIdx,allToUnique] = unique([rays.energy]);
 tempFocus = [rays.focusIx];
 focusIxVec = tempFocus(uniqueEnergyIdx);
 
@@ -72,3 +74,7 @@ else
     % sigmaIni = griddata(distMat,x1, sigMat, repmat(SSD,1,size(distMat,2)),x);
     sigmaIni = interp2(x1,distMat, sigMat,x, repmat(SSD,1,size(distMat,2)));
 end
+
+% one value per energy entry of the ray (duplicates get the same initial sigma;
+% the range-shifter widening is added separately in the dose engine)
+sigmaIni = sigmaIni(allToUnique);

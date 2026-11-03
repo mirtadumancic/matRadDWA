@@ -1,0 +1,9 @@
+2026-10-29 00:01  run 1/4 start: IBA_cyclotron + Generic, center, LET weights [0 0.1 0.3 1], coverage 1000, tag _cov
+2026-10-29 00:22  run 1 done
+2026-10-29 00:22  run 2/4 start: IBA_cyclotron + Generic, posterior, LET weights [0 0.1 0.3 1], coverage 1000, tag _cov
+2026-10-29 02:51  run 2 done
+2026-10-29 02:51  run 3/4 start: IBA_cyclotron + Generic, oblique, LET weights [0 0.1 0.3 1], coverage 1000, tag _cov
+2026-10-29 03:12  run 3 done
+2026-10-29 03:12  run 4/4 start: IBA_cyclotron + Generic, anterior, LET weights [0 0.1 0.3 1], coverage 1000, tag _cov
+2026-10-29 03:22  run 4 done
+2026-10-29 03:22  queue finished
