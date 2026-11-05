@@ -18,13 +18,14 @@
 %% 0  Settings ---------------------------------------------------------------
 S = struct();
 S.caseFile  = 'M:/My Documents/CNS_ESTRO_cases/CNS_01.json';
-S.studyFile = '';                            % '' = CNS_ESTRO/study_UHN_CNS_v1.json (beam set names)
+S.studyFile = '';                            % '' = CNS_ESTRO/study_UHN_CNS_v1.json (must be the study used for the screen)
 S.planes    = {'axial', 'sagittal', 'coronal'};
 S.centreOn  = {'CTV', 'Chiasm'};             % one set of figures through the centre of each
 S.isoPct    = [50 95 107 120];               % isodose lines (% of Rx)
 S.washMinPct = 50;                           % lowest dose shown in colour
 S.background = 'dark';                       % 'dark' (TPS look) or 'light' (print)
-S.crop      = 'Brain';                       % 'Brain' hides the face; 'Body' shows all
+S.crop      = {'Brain', 'Eye_L', 'Eye_R'};   % crop box = union of these + margin: skull, eyes, beam entry
+S.cropMarginMm = 15;                         % (crop 'Brain' + margin 10 hides the face for slides; 'Body' = all)
 S.showPhoton = true;                         % first panel = delivered photon plan
 S.contours = struct( ...
     'name',  {'GTV', 'CTV', 'PTV', 'OpticNerve_L', 'OpticNerve_R', 'Chiasm', 'Brainstem', 'Eye_L', 'Eye_R', 'Body'}, ...
@@ -58,7 +59,7 @@ caseCfg = cns_readJson(S.caseFile);
 study   = cns_readJson(S.studyFile);
 cns_checkPrivacy(caseCfg, S.caseFile);
 caseDir = fullfile(cns_expandPath(caseCfg.workDir), caseCfg.alias);
-scrDir  = fullfile(caseDir, 'beamScreen_v1');
+scrDir  = fullfile(caseDir, cns_getfield(study, 'beamScreen.folder', 'beamScreen_v1'));
 outDir  = fullfile(scrDir, 'figures_slices_v2');
 if ~exist(outDir, 'dir'), mkdir(outDir); end
 scrStudyFile = fullfile(scrDir, 'study_beamScreen.json');
@@ -125,7 +126,7 @@ for c = 1:numel(S.centreOn)
     for i = 1:numel(S.planes)
         o = struct('plane', S.planes{i}, 'centreOn', S.centreOn{c}, 'rxGy', rx, ...
             'washMinPct', S.washMinPct, 'isoPct', S.isoPct, 'contours', S.contours, ...
-            'crop', S.crop, 'background', S.background);
+            'crop', {S.crop}, 'cropMarginMm', S.cropMarginMm, 'background', S.background);
         base = fullfile(outDir, sprintf('fig_screen_%s_%s_v2', S.planes{i}, S.centreOn{c}));
         cns_figSliceRS(ct, cst, pan, o, base);
         fprintf('[UHN_CNS_02b] %s.png\n', base);

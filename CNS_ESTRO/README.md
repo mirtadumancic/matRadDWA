@@ -197,3 +197,12 @@ reads each `<alias>_scr<k>` folder, normalises the plan exactly as the screen ta
 the photon plan + sets A-D on the same slice (axial, sagittal, coronal), centred on the CTV and on
 the chiasm. Isodoses 50/95/107/120 % (120 % shows the hot spots). Output:
 `beamScreen_v1/figures_slices_v2/fig_screen_<plane>_<centre>_v2.pdf/.png` (+ `_slices.mat`).
+
+## Eye-sparing beam screen (study_UHN_CNS_beamScreen_v2.json)
+Same as study_UHN_CNS_v1 but with beam sets that never enter through the orbit (source directions
+checked with matRad_getRotationMatrix): C left lateral + vertex; E lateral 10 deg posterior +
+superior-left oblique (couch 300); F superior-left 45 deg (couch 315) + vertex; G lateral 10 deg
+posterior + vertex. Results go to `beamScreen_v2/` (study field `beamScreen.folder`), so the first
+screen is kept. Run UHN_CNS_02 (runBeamScreen = true) and UHN_CNS_02b with S.studyFile set to this file.
+**`beams.setId` is only a label**: copy the set's gantryAngles and couchAngles into the case file.
+cns_buildPln now stops if setId names a set of the study but the angles differ.

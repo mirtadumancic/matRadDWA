@@ -14,6 +14,16 @@ if isempty(g), error('cns:beams', 'Set beams.gantryAngles in the case file.'); e
 pln.propStf.gantryAngles = g(:)';
 c = cns_getfield(caseCfg, 'beams.couchAngles', zeros(size(g)));
 pln.propStf.couchAngles = c(:)';
+% safety: if the case names a beam set of this study, its angles must match (setId is only a label)
+sid = cns_getfield(caseCfg, 'beams.setId', '');
+sets = cns_toCell(cns_getfield(study, 'beamCandidates.sets', {}));
+for i = 1:numel(sets)
+    if strcmp(sets{i}.id, sid) && (~isequal(sets{i}.gantryAngles(:)', g(:)') || ~isequal(sets{i}.couchAngles(:)', c(:)'))
+        error('cns:beams', ['Case file says beams.setId = %s but gantry [%s] / couch [%s]; set %s is gantry [%s] / couch [%s]. ' ...
+            'Copy the angles of the set into the case file.'], sid, num2str(g(:)'), num2str(c(:)'), sid, ...
+            num2str(sets{i}.gantryAngles(:)'), num2str(sets{i}.couchAngles(:)'));
+    end
+end
 
 bw = cns_getfield(study, ['stf.bixelWidthMm.' machine], cns_getfield(study, 'stf.bixelWidthMm.default', 5));
 pln.propStf.bixelWidth = bw;

@@ -24,7 +24,7 @@
 S = struct();
 S.caseFile  = 'M:/My Documents/CNS_ESTRO_cases/CNS_01.json';
 S.studyFile = '';             % '' = CNS_ESTRO/study_UHN_CNS_v1.json
-S.runBeamScreen = true;      % true: section B (about 5-10 min per candidate set)
+S.runBeamScreen = false;      % true: section B (about 5-10 min per candidate set)
 S.machines = {};              % {} = study.machines; e.g. {'Generic'} for a first test
 
 matRadRoot = getenv('MATRAD_ROOT');
@@ -81,7 +81,7 @@ if S.runBeamScreen
     scr.stf.bixelWidthMm.(B.machine) = B.bixelWidthMm;
     scr.stf.longitudinalSpotSpacingMm = B.longitudinalSpotSpacingMm;
     scr.optimisation.maxIter = B.maxIter;
-    scrDir = fullfile(caseDir, 'beamScreen_v1');
+    scrDir = fullfile(caseDir, cns_getfield(B, 'folder', 'beamScreen_v1'));   % v2 study: beamScreen_v2
     if ~exist(scrDir, 'dir'), mkdir(scrDir); end
     scrStudy = fullfile(scrDir, 'study_beamScreen.json');
     cns_writeJson(scrStudy, scr);

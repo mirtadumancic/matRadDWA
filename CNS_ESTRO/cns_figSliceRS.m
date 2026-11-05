@@ -19,7 +19,7 @@ function cns_figSliceRS(ct, cst, panels, opt, base)
 %   letWindow    [lo hi] keV/um (default [1 8]); letMinDoseGy (default 0.1*rx)
 %   diffWindow   [-a a] for 'diff' panels (default [-5 5]), diffUnit label
 %   contours     struct array: name, color (RGB), label ('' = none), labelOffsetMm [right down]
-%   crop         structure name to crop to (default 'Brain', else 'Body'), cropMarginMm (10)
+%   crop         structure name, or a cell list (box = union), default 'Brain' (else 'Body'); cropMarginMm (10)
 %   ctWindowHU   (default [-40 120]: soft tissue / brain; bone saturates white)
 %   pixelMm      resampled pixel size (default 0.25)
 %   background   'dark' (TPS look, default) | 'light' (journal print)
@@ -68,12 +68,16 @@ HU = double(ct.cubeHU{1});
 [ctS, dr, dc, ori] = getSlice(HU, k, plane, ct.resolution);
 
 % ---- crop box (mm) from the crop structure on this slice
-cropName = g('crop', 'Brain');
-if ~any(strcmp(cst(:,2), cropName)), cropName = 'Body'; end
+cropNames = cns_toCell(g('crop', 'Brain'));      % one name or a list: crop box = union of them
+cropNames = cropNames(cellfun(@(n) any(strcmp(cst(:,2), n)), cropNames));
+if isempty(cropNames), cropNames = {'Body'}; end
 box = [];
-ib = find(strcmp(cst(:,2), cropName), 1);
-if ~isempty(ib)
-    m = false(ct.cubeDim); m(cst{ib,4}{1}) = true;
+m = false(ct.cubeDim);
+for ic = 1:numel(cropNames)
+    ib = find(strcmp(cst(:,2), cropNames{ic}), 1);
+    if ~isempty(ib), m(cst{ib,4}{1}) = true; end
+end
+if any(m(:))
     mS = getSlice(double(m), k, plane, ct.resolution) > 0.5;
     [rr, cc] = find(mS);
     if ~isempty(rr)
