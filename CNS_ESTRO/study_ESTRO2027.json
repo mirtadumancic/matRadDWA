@@ -1,0 +1,439 @@
+{
+  "_readme": "Study design for the ESTRO 2027 abstract: DWA vs Generic, dose-only vs LET-modified planning, CNS. Doses are TOTAL Gy(RBE) with RBE 1.1 (doseFraction = x prescription). Edit here, not in the code. Case files hold only patient-specific settings.",
+  "studyId": "ESTRO2027_CNS_LET",
+  "machines": [
+    "DWA_proton_v2",
+    "Generic"
+  ],
+  "referenceMachine": "Generic",
+  "stf": {
+    "bixelWidthMm": {
+      "DWA_proton_v2": 3,
+      "Generic": 5,
+      "IBA_cyclotron": 5,
+      "default": 5
+    },
+    "longitudinalSpotSpacingMm": 3,
+    "rangeShifterEqDmm": {
+      "IBA_cyclotron": 0
+    }
+  },
+  "doseCalc": {
+    "engine": "HongPB",
+    "lateralModel": "double",
+    "doseGridMm": 3
+  },
+  "robustness": {
+    "scenarios": "nomScen",
+    "objective": "none"
+  },
+  "optimisation": {
+    "maxIter": 500,
+    "optimizer": "IPOPT"
+  },
+  "reusePlans": true,
+  "normalisation": {
+    "structure": "PTV",
+    "metric": "D95",
+    "fractionOfRx": 0.95
+  },
+  "structures": {
+    "ptvMarginMm": 3
+  },
+  "objectives": {
+    "PTV": [
+      {
+        "type": "SquaredDeviation",
+        "penalty": 50,
+        "doseFraction": 1.0
+      },
+      {
+        "type": "SquaredUnderdosing",
+        "penalty": 1000,
+        "doseFraction": 0.95
+      },
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 100,
+        "doseFraction": 1.05
+      }
+    ],
+    "CTV": [
+      {
+        "type": "SquaredUnderdosing",
+        "penalty": 1000,
+        "doseFraction": 0.98
+      }
+    ],
+    "Brainstem": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 300,
+        "doseGy": 54
+      }
+    ],
+    "Chiasm": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 200,
+        "doseGy": 54
+      }
+    ],
+    "OpticNerve_L": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 200,
+        "doseGy": 54
+      }
+    ],
+    "OpticNerve_R": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 200,
+        "doseGy": 54
+      }
+    ],
+    "Eye_L": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 50,
+        "doseGy": 40
+      }
+    ],
+    "Eye_R": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 50,
+        "doseGy": 40
+      }
+    ],
+    "Lens_L": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 20,
+        "doseGy": 7
+      }
+    ],
+    "Lens_R": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 20,
+        "doseGy": 7
+      }
+    ],
+    "Cochlea_L": [
+      {
+        "type": "MeanDose",
+        "penalty": 10,
+        "doseGy": 0
+      }
+    ],
+    "Cochlea_R": [
+      {
+        "type": "MeanDose",
+        "penalty": 10,
+        "doseGy": 0
+      }
+    ],
+    "Hippocampus_L": [
+      {
+        "type": "MeanDose",
+        "penalty": 10,
+        "doseGy": 0
+      }
+    ],
+    "Hippocampus_R": [
+      {
+        "type": "MeanDose",
+        "penalty": 10,
+        "doseGy": 0
+      }
+    ],
+    "BrainMinusPTV": [
+      {
+        "type": "MeanDose",
+        "penalty": 20,
+        "doseGy": 0
+      }
+    ],
+    "Ring_5_10": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 100,
+        "doseFraction": 0.85
+      }
+    ],
+    "Ring_10_20": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 100,
+        "doseFraction": 0.6
+      }
+    ],
+    "Body": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 100,
+        "doseFraction": 1.05
+      }
+    ]
+  },
+  "letStructures": [
+    "Brainstem",
+    "Chiasm",
+    "OpticNerve_L",
+    "OpticNerve_R",
+    "BrainRing_0_15"
+  ],
+  "plans": [
+    {
+      "id": "doseOnly",
+      "let": {
+        "mode": "none"
+      }
+    },
+    {
+      "id": "LETxD_0p03",
+      "let": {
+        "mode": "LETxDose",
+        "penalty": 0.03
+      }
+    },
+    {
+      "id": "LETxD_0p1",
+      "let": {
+        "mode": "LETxDose",
+        "penalty": 0.1
+      }
+    },
+    {
+      "id": "LETxD_0p3",
+      "let": {
+        "mode": "LETxDose",
+        "penalty": 0.3
+      }
+    },
+    {
+      "id": "LETxD_1",
+      "let": {
+        "mode": "LETxDose",
+        "penalty": 1
+      }
+    },
+    {
+      "id": "dirty_10",
+      "let": {
+        "mode": "dirtyDose",
+        "penalty": 10
+      }
+    },
+    {
+      "id": "dirty_100",
+      "let": {
+        "mode": "dirtyDose",
+        "penalty": 100
+      }
+    }
+  ],
+  "evaluation": {
+    "alphaBetaTarget": 10,
+    "alphaBetaNormal": 2,
+    "letdMinDoseGy": 1,
+    "dirtyDoseThresholdKeVum": 2,
+    "dvhBinGy": 0.5,
+    "lvhBinKeVum": 0.1,
+    "dLetd": {
+      "sigmaMm": 6,
+      "minDoseGy": 5
+    },
+    "targets": [
+      "CTV",
+      "PTV",
+      "GTV"
+    ],
+    "oars": [
+      "Brainstem",
+      "Chiasm",
+      "OpticNerve_L",
+      "OpticNerve_R",
+      "Eye_L",
+      "Eye_R",
+      "Lens_L",
+      "Lens_R",
+      "Cochlea_L",
+      "Cochlea_R",
+      "Hippocampus_L",
+      "Hippocampus_R",
+      "TemporalLobe_L",
+      "TemporalLobe_R",
+      "Cerebellum",
+      "Pituitary",
+      "SpinalCord",
+      "Brain",
+      "Brain_healthy",
+      "BrainMinusPTV",
+      "BrainRing_0_15",
+      "Ring_0_5",
+      "Ring_5_10",
+      "Ring_10_20"
+    ],
+    "hotSpots": [
+      {
+        "structure": "Brainstem",
+        "doseGy": 50,
+        "letd": 2.8,
+        "quantity": "RBE11",
+        "_ref": "brainstem necrosis threshold (LET_abstract_plan.md)"
+      },
+      {
+        "structure": "Brain_healthy",
+        "doseGy": 43,
+        "letd": 4.6,
+        "quantity": "RBE11",
+        "_ref": "healthy-brain threshold (LET_abstract_plan.md)"
+      },
+      {
+        "structure": "*",
+        "doseGy": 20,
+        "letd": 4,
+        "quantity": "RBE11",
+        "_ref": "water-phantom hot-spot metric"
+      },
+      {
+        "structure": "*",
+        "doseGy": 30,
+        "letd": 2.5,
+        "quantity": "RBE11",
+        "_ref": "letAgent default"
+      }
+    ]
+  },
+  "selection": {
+    "_readme": "LETselected = the LET plan with the lowest objective among those meeting every coverage rule. Rules: min/max (absolute), minFractionOfRx/maxFractionOfRx, maxDecreasePctVsRef/maxIncreasePctVsRef (vs the dose-only plan of the same machine).",
+    "coverage": [
+      {
+        "structure": "CTV",
+        "quantity": "RBE11",
+        "metric": "D98",
+        "minFractionOfRx": 0.95,
+        "maxDecreasePctVsRef": 1
+      },
+      {
+        "structure": "CTV",
+        "quantity": "RBE11",
+        "metric": "D2",
+        "maxIncreasePctVsRef": 2
+      }
+    ],
+    "objective": {
+      "structure": "Brainstem",
+      "quantity": "DxLETd",
+      "metric": "D2"
+    }
+  },
+  "summary": {
+    "referencePlan": "doseOnly",
+    "comparePlan": "LETselected",
+    "keyMetrics": [
+      {
+        "structure": "CTV",
+        "quantity": "RBE11",
+        "metric": "D95"
+      },
+      {
+        "structure": "CTV",
+        "quantity": "RBE11",
+        "metric": "D98"
+      },
+      {
+        "structure": "CTV",
+        "quantity": "McN",
+        "metric": "D95"
+      },
+      {
+        "structure": "CTV",
+        "quantity": "McN",
+        "metric": "D98"
+      },
+      {
+        "structure": "PTV",
+        "quantity": "RBE11",
+        "metric": "D95"
+      },
+      {
+        "structure": "Brainstem",
+        "quantity": "RBE11",
+        "metric": "D0_03cc"
+      },
+      {
+        "structure": "Brainstem",
+        "quantity": "McN",
+        "metric": "D0_03cc"
+      },
+      {
+        "structure": "Brainstem",
+        "quantity": "LETd",
+        "metric": "LETd_P98"
+      },
+      {
+        "structure": "Brainstem",
+        "quantity": "DxLETd",
+        "metric": "D2"
+      },
+      {
+        "structure": "Brainstem",
+        "quantity": "hotSpot",
+        "metric": "V_D50_L2.8_cc"
+      },
+      {
+        "structure": "Chiasm",
+        "quantity": "McN",
+        "metric": "D0_03cc"
+      },
+      {
+        "structure": "Brain_healthy",
+        "quantity": "McN",
+        "metric": "Dmean"
+      },
+      {
+        "structure": "Brain_healthy",
+        "quantity": "hotSpot",
+        "metric": "V_D43_L4.6_cc"
+      },
+      {
+        "structure": "BrainRing_0_15",
+        "quantity": "hotSpot",
+        "metric": "V_D20_L4_cc"
+      },
+      {
+        "structure": "BrainMinusPTV",
+        "quantity": "RBE11",
+        "metric": "V20Gy_cc"
+      }
+    ],
+    "clinicalLabel": "photon"
+  },
+  "figures": {
+    "oars": [
+      "Brainstem",
+      "Chiasm",
+      "Brain_healthy",
+      "BrainRing_0_15"
+    ],
+    "hotSpotBars": [
+      {
+        "structure": "Brainstem",
+        "metric": "V_D50_L2.8_cc"
+      },
+      {
+        "structure": "Brain_healthy",
+        "metric": "V_D43_L4.6_cc"
+      },
+      {
+        "structure": "BrainRing_0_15",
+        "metric": "V_D20_L4_cc"
+      }
+    ],
+    "slicesForPatient": false
+  }
+}

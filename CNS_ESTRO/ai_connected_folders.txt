@@ -1,0 +1,6 @@
+# Folders an AI assistant can read. cns_runCase refuses a PATIENT case whose
+# case file, data or workDir is inside one of these (or inside the code repository).
+# One path per line, ~ = home. Add every folder you connect to an AI tool.
+~/Desktop/Agent-LET-optimizer
+~/Work/MATLAB_Projects/matRadDWA
+~/Work/MATLAB_Projects/Test_Patient_Planning

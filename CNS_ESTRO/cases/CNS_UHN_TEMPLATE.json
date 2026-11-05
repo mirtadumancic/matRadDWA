@@ -1,0 +1,17 @@
+{
+  "_readme": "UHN patient. Copy this file to hospital storage OUTSIDE the code repository and outside any folder connected to an AI tool, one file per patient. alias = study code only (no name, MRN or dates). cns_runCase refuses to run unless the case file, source.path and workDir are on hospital storage and reb.protocol is set. Import the DICOM on the UHN machine with cns_importDicom(dicomDir, 'D:/CNS_ESTRO_cases/CNS_01.mat').",
+  "alias": "CNS_01",
+  "dataClass": "patient",
+  "reb": {"protocol": "REB-XX-XXXX"},
+  "workDir": "D:/CNS_ESTRO_runs",
+  "source": {"type": "matFile", "path": "D:/CNS_ESTRO_cases/CNS_01.mat"},
+  "prescription": {"totalDoseGyRBE": 54, "numOfFractions": 30},
+  "structures": {
+    "ptvMarginMm": 3,
+    "map": {"CTV": "CTV_5400", "PTV": "PTV_5400", "Body": "BODY"}
+  },
+  "beams": {"gantryAngles": [90, 270, 0], "couchAngles": [0, 0, 0]},
+  "objectives": {
+    "Brainstem": [{"type": "SquaredOverdosing", "penalty": 300, "doseGy": 54}]
+  }
+}

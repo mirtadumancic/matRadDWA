@@ -1,0 +1,43 @@
+{
+  "_readme": "UHN CNS ependymoma case, v1. COPY THIS FILE TO HOSPITAL STORAGE on the UHN PC (outside matRadDWA and outside any AI-connected folder), fill reb.protocol, the paths and the beams, and pass its path to UHN_CNS_01/02/03. alias = study code only. UHN_CNS_01 imports source.dicomDir (CT, RS1, RP1, RD1; MR and REG are ignored) once and saves source.path.",
+  "alias": "CNS_01",
+  "dataClass": "patient",
+  "reb": {
+    "protocol": "REB-XX-XXXX"
+  },
+  "workDir": "M:/My Documents/CNS_ESTRO_runs",
+  "source": {
+    "type": "matFile",
+    "path": "M:/My Documents/CNS_ESTRO_cases/CNS_01_imported.mat",
+    "dicomDir": "M:/My Documents/UHN_DICOM/CNS_01"
+  },
+  "prescription": {
+    "totalDoseGyRBE": 54,
+    "numOfFractions": 30,
+    "_check": "UHN_CNS_01 prints the RTPLAN fraction number: correct numOfFractions if it differs"
+  },
+  "structures": {
+    "map": {
+      "CTV": "CTVp_5400",
+      "PTV": "PTVp_5400",
+      "GTV": "GTVp",
+      "Brain": "Brain"
+    }
+  },
+  "beams": {
+    "_readme": "Start with beamCandidates set A (2 + 4 o'clock). Change after the beam screen in UHN_CNS_02.",
+    "setId": "A_2and4oclock",
+    "gantryAngles": [
+      60,
+      120
+    ],
+    "couchAngles": [
+      0,
+      0
+    ]
+  },
+  "reference": {
+    "use": true,
+    "label": "photon"
+  }
+}

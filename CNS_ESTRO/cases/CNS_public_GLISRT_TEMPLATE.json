@@ -1,0 +1,14 @@
+{
+  "_readme": "Public case from TCIA (GLIS-RT, doi:10.7937/TCIA.T905-ZQ20, CT + RTSTRUCT, no Brain contour: a HU proxy is built; or Burdenko-GBM-Progression, doi:10.7937/E1QP-D183, CTV/PTV/Brain/Brainstem/Chiasm/optics, restricted licence). Import once with cns_importDicom(dicomDir, outMat), then point source.path at the .mat. Check the structure names printed by the import and fill structures.map where the automatic matching is wrong or ambiguous (e.g. several CTVs). Pick beams that suit the tumour site.",
+  "alias": "GLIS_AAC_01",
+  "dataClass": "public",
+  "dataClassNote": "TCIA GLIS-RT, case GLI_xxx_AAC (replace with the real case ID)",
+  "workDir": "~/Work/CNS_ESTRO_runs",
+  "source": {"type": "matFile", "path": "~/Work/CNS_ESTRO_public/GLI_xxx_AAC.mat"},
+  "prescription": {"totalDoseGyRBE": 59.4, "numOfFractions": 33},
+  "structures": {
+    "ptvMarginMm": 3,
+    "map": {"CTV": "CTV", "Body": "External"}
+  },
+  "beams": {"gantryAngles": [90, 30, 150], "couchAngles": [0, 0, 0]}
+}

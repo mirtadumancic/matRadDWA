@@ -1,0 +1,14 @@
+{
+  "_readme": "Training / rehearsal case: matRad's HEAD_AND_NECK phantom, exported to DICOM with a matRad photon IMRT plan as the stand-in for the clinical plan (RP1/RD1), then imported back with cns_importDicom (made by matRad_example5_DWA_HN_training.m). Public, shareable. Single-level stand-in for a CNS case: CTV = GTV, PTV = PTV70, 70 Gy(RBE) in 35 fractions. PTV63 is not planned in the proton plans (no spots there).",
+  "alias": "HN_training",
+  "dataClass": "public",
+  "dataClassNote": "matRad HEAD_AND_NECK phantom (CORT), exported to DICOM by matRad",
+  "workDir": "~/Work/CNS_ESTRO_runs",
+  "source": {"type": "matFile", "path": "~/Work/CNS_ESTRO_public/HN_training.mat"},
+  "prescription": {"totalDoseGyRBE": 70, "numOfFractions": 35},
+  "structures": {
+    "map": {"CTV": "GTV", "PTV": "PTV70", "Body": "SKIN"}
+  },
+  "beams": {"gantryAngles": [45, 315, 180], "couchAngles": [0, 0, 0]},
+  "reference": {"use": true, "label": "photon"}
+}

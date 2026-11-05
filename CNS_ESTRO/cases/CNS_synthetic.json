@@ -1,0 +1,9 @@
+{
+  "_readme": "Synthetic head (no patient data). CTV 3 mm from a brainstem-like cylinder. Run anywhere, including the Mac.",
+  "alias": "SYN_CNS_gap3",
+  "dataClass": "synthetic",
+  "source": {"type": "synthetic", "gapMm": 3, "ctvRadiusMm": 18, "resolutionMm": 3, "includeBrain": false},
+  "prescription": {"totalDoseGyRBE": 54, "numOfFractions": 30},
+  "structures": {"ptvMarginMm": 3},
+  "beams": {"gantryAngles": [90, 30, 150], "couchAngles": [0, 0, 0]}
+}
