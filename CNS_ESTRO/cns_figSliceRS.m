@@ -176,7 +176,8 @@ end
 % ---- one colour bar per row, at the right
 for r = 1:nRow
     if isempty(rowTypes{r}), continue; end
-    ax = axes('Parent', f, 'Position', [1 - cbW + 0.015, 1 - r / nRow + 0.06, 0.022, 1 / nRow - 0.14]);
+    topPad = max(0.08, 1.0 / H);                 % room for the colour-bar title (>= 1 cm)
+    ax = axes('Parent', f, 'Position', [1 - cbW + 0.015, 1 - r / nRow + 0.06, 0.022, 1 / nRow - 0.06 - topPad]);
     switch rowTypes{r}
         case 'dose'
             stops = [50 90 95 107 120 140 160];

@@ -190,3 +190,10 @@ ipopt file was found). Common causes and fixes:
 Figure saving on Mac: hidden figures sometimes report a zero-size canvas ("The output width and
 height must be greater than 0"). The savers now resize the figure, try `exportgraphics`, and finally
 redraw it visibly before giving up. The plan results are not affected by this message.
+
+## UHN_CNS_02b_beamScreen_slices_v2.m (beam screen, TPS-style slices)
+Run after the beam screen (UHN_CNS_02 with `S.runBeamScreen = true`). Nothing is re-optimised: it
+reads each `<alias>_scr<k>` folder, normalises the plan exactly as the screen table did, and draws
+the photon plan + sets A-D on the same slice (axial, sagittal, coronal), centred on the CTV and on
+the chiasm. Isodoses 50/95/107/120 % (120 % shows the hot spots). Output:
+`beamScreen_v1/figures_slices_v2/fig_screen_<plane>_<centre>_v2.pdf/.png` (+ `_slices.mat`).
