@@ -81,9 +81,9 @@ for r, (kind, pair) in enumerate([('Pencil beam', ['mR_PB', 'RS_PB']), ('Monte C
         pk = zf[np.nanargmax(ref)]
         a.text(pk, 104, f'{e:.0f}', ha='center', fontsize=6.5, color=GREY)
     a.set_ylim(0, 112); a.set_ylabel('IDD (% of max)')
-    a.set_title(f'{kind} vs TOPAS  (numbers: energy, MeV)', loc='left')
+    a.set_title(kind, loc='left')
     a.legend(loc='lower right', bbox_to_anchor=(1.0, 1.0), ncol=3, fontsize=6.5)
-    ad.axhline(0, color=GREY, lw=0.6); ad.set_ylim(-6, 6); ad.set_ylabel('Δ (% of max)')
+    ad.axhline(0, color=GREY, lw=0.6); ad.set_ylim(-6, 6); ad.set_ylabel('Δ vs TOPAS\n(% of max)')
 axs[-1].set_xlabel('Depth in water (mm)'); axs[-1].set_xlim(0, 340)
 for a, s in zip(axs[[0, 2]], 'AB'):
     a.text(-0.09, 1.04, s, transform=a.transAxes, fontsize=10, fontweight='bold', va='bottom')
@@ -92,8 +92,8 @@ for x in ('pdf', 'png'): fig.savefig(f'{OUT}/BraggPeaks_IDD_vs_TOPAS.{x}', dpi=3
 # ---------- figure 2: metric differences vs energy ----------
 MK = {'mR_PB': dict(color=RED, marker='o', mfc=RED, ls='-'), 'RS_PB': dict(color=BLK, marker='s', mfc=BLK, ls='--'),
       'mR_MC': dict(color=RED, marker='o', mfc='white', ls='-'), 'RS_MC': dict(color=BLK, marker='s', mfc='white', ls='--')}
-panels = [('d_R80', 'ΔR80 vs TOPAS (mm)', 1.0), ('d_falloff', 'Δ fall-off R20−R80 (mm)', None),
-          ('d_entrance', 'Δ entrance dose at 2 mm\n(% of max)', None), ('plateauMAD', 'Mean |Δ| proximal to R90\n(% of max)', None)]
+panels = [('d_R80', 'ΔR80 vs TOPAS (mm)', None), ('d_falloff', 'Δ fall-off R20−R80\nvs TOPAS (mm)', None),
+          ('d_entrance', 'Δ entrance dose at 2 mm\nvs TOPAS (% of max)', None), ('plateauMAD', 'Mean |Δ| vs TOPAS, 2 mm to R90\n(% of max)', None)]
 fig2, ax2 = plt.subplots(2, 2, figsize=(7.0, 5.0), sharex=True)
 for a, (c, lab, tol) in zip(ax2.flat, panels):
     for s in [k for k in ['mR_PB', 'RS_PB', 'mR_MC', 'RS_MC'] if k in src]:

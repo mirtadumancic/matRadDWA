@@ -29,7 +29,11 @@ matRad_cfg = matRad_rc;
 matRad_cfg.disableGUI = true;
 
 %% ---------------- settings ------------------------------------------------
-machineName = 'DWA_proton_v2';
+%machineName = 'DWA_proton_v2';   % 'DWA_proton_v3' after matRad_makeMachines_v3.m
+machineName   = 'DWA_proton_v3';
+airOffsetCorr = true;
+%airOffsetCorr = false;           % v2: false (fitAirOffset = 0 double-counts the 400 mm air)
+                                 % v3: true, matRad's default (fitAirOffset = 400)
 engine      = 'HongPB';          % 'HongPB' (Mac) or 'MCsquare' (PC)
 energies    = 'all';             % 'all' (58 TOPAS energies) or a vector in MeV, e.g. [70 100 150 200 228.84]
 nHistMC     = 1e6;               % MCsquare primaries per energy
@@ -42,11 +46,13 @@ airGap_mm   = 20;                % air in front of the water surface inside the 
 
 outDir = fullfile(rootDir, 'DWA_final_machine', 'BraggPeaks_vsTOPAS_RS');
 if ~exist(outDir, 'dir'), mkdir(outDir); end
-outFile = fullfile(outDir, sprintf('IDD_%s_%s_noAirOffset.csv', machineName, engine));
+if airOffsetCorr, aTag = 'airOffsetOn'; else, aTag = 'noAirOffset'; end
+outFile = fullfile(outDir, sprintf('IDD_%s_%s_%s.csv', machineName, engine, aTag));
 
 %% ---------------- MCsquare needs text metadata in the machine file -------
 if strcmp(engine, 'MCsquare')
     mf = fullfile(rootDir, 'matRad', 'basedata', ['protons_' machineName '.mat']);
+    if ~exist(mf, 'file'), mf = fullfile(rootDir, 'userdata', 'machines', ['protons_' machineName '.mat']); end
     S = load(mf, 'machine');
     need = {'description', machineName; 'created_by', 'Mirta Dumancic'; 'created_on', datestr(now, 'yyyy-mm-dd')};
     changed = false;
@@ -110,7 +116,7 @@ if strcmp(engine, 'HongPB')
     % 400 mm snout-to-surface air, so every peak came out 0.0011*400 = 0.44 mm shallower.
     % Here (surface at the isocentre = commissioning geometry) switching the correction off
     % is exact. The permanent fix is fitAirOffset = 400 in the next machine (DWA_proton_v3).
-    pln.propDoseCalc.airOffsetCorrection = false;
+    pln.propDoseCalc.airOffsetCorrection = airOffsetCorr;
 else
     pln.propDoseCalc.engine = 'MCsquare';
     pln.propDoseCalc.numHistoriesDirect = nHistMC;
