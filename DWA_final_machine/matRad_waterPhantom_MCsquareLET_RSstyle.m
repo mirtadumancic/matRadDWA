@@ -54,10 +54,19 @@ Rx_total   = 54; nFx = 30;
 targetDiam_mm = 50; marginLat_mm = 3; rangeUnc = 0.035;   % as in the planning scripts
 res_mm     = 3;
 letGrid    = (0:0.05:40)';                     % keV/um
+% The plan was optimised with DWA_proton_v2, whose depth-dose tables are relative
+% (max = 100), so its spot weights are not proton numbers. MCsquare reads weights as
+% protons, so the energy layers get the wrong relative intensities (about 17 % tilt
+% across this target). Rescaling each weight by Edep_v2 / Edep_v3 of its energy layer
+% gives the proton numbers that reproduce the same pencil-beam dose with the
+% calibrated DWA_proton_v3.
+rescaleToCalibrated = true;
+calibratedMachine   = 'DWA_proton_v3';
 
 outDir = fullfile(rootDir, 'DWA_final_machine', 'WaterPhantom_MCLET_RSstyle');
 if ~exist(outDir, 'dir'), mkdir(outDir); end
 [~, planName] = fileparts(planFile);
+if rescaleToCalibrated, outTag = '_wCalibrated'; else, outTag = '_wRaw'; end
 
 %% ---------------- phantom (identical to the planning scripts) -------------
 semiLR = 250; semiAP = 150; halfSI = 150; airMargin = 30;
@@ -107,6 +116,24 @@ if sum([stf.totalNumOfBixels]) ~= numel(w)
 end
 fprintf('%s: %d spots, %s\n', planName, numel(w), pln.machine);
 
+% spot weights -> proton numbers (see settings)
+wMC = w;
+if rescaleToCalibrated
+    mOld = matRad_loadMachine(struct('radiationMode', 'protons', 'machine', pln.machine));
+    mNew = matRad_loadMachine(struct('radiationMode', 'protons', 'machine', calibratedMachine));
+    Eold = [mOld.data.energy]; Enew = [mNew.data.energy];
+    if numel(Eold) ~= numel(Enew) || max(abs(Eold - Enew)) > 1e-6, error('Energy layers of %s and %s differ.', pln.machine, calibratedMachine); end
+    cE = arrayfun(@(i) trapz(mNew.data(i).depths, mNew.data(i).Z) / trapz(mOld.data(i).depths, mOld.data(i).Z), 1:numel(Eold));
+    eSpot = zeros(numel(w), 1); n = 0;
+    for i = 1:numel(stf), for j = 1:stf(i).numOfRays, for k = 1:stf(i).numOfBixelsPerRay(j)
+        n = n + 1; eSpot(n) = stf(i).ray(j).energy(k);
+    end, end, end
+    [~, ixE] = min(abs(eSpot - Eold), [], 2);
+    wMC = w ./ cE(ixE)';
+    fprintf('  weights rescaled to %s: calibration factor %.3f (shallowest layer) to %.3f (deepest layer)\n', ...
+        calibratedMachine, max(cE(unique(ixE))), min(cE(unique(ixE))));
+end
+
 %% ---------------- MCsquare, RayStation-like LET ---------------------------
 matRad_cfg.defaults.doseWeightingThreshold = 0;      % LETd wherever dose > 0
 plnMC = pln;
@@ -117,7 +144,7 @@ for m = 1:numel(letMethods)
     engine = DoseEngines.matRad_ParticleMCsquareEngine(plnMC);
     engine.config.LET_Calculation_Method = letMethods{m};
     t0 = tic;
-    res = engine.calcDoseForward(ct, cst, stf, w);
+    res = engine.calcDoseForward(ct, cst, stf, wMC);
     cd(rootDir);
     if isfield(res, 'RBExD'), D = res.RBExD; elseif isfield(res, 'RBExDose'), D = res.RBExDose; else, D = 1.1 * res.physicalDose; end
     D = nFx * sc * D;
@@ -164,14 +191,14 @@ for s = 1:size(srcs, 1)
         end
     end
 end
-writetable(H, fullfile(outDir, [planName '_LVH.csv']));
-writetable(Ssum, fullfile(outDir, [planName '_summary.csv']));
+writetable(H, fullfile(outDir, [planName outTag '_LVH.csv']));
+writetable(Ssum, fullfile(outDir, [planName outTag '_summary.csv']));
 disp(Ssum(Ssum.doseCut_fracRx == 0 | Ssum.doseCut_fracRx == 0.01, :));
 
 Dtot = single(Dmc); LET_MC = structfun(@single, LETmc, 'UniformOutput', false);
 LET_PB = single(LET_PB); D_PB = single(D_PB); LET_PB0 = single(LET_PB0); D_PB0 = single(D_PB0); %#ok<NASGU>
 masks = struct('tMask', find(tMask), 'outside', find(outside)); %#ok<NASGU>
-save(fullfile(outDir, [planName '_MCLET.mat']), 'Dtot', 'LET_MC', 'LET_PB', 'D_PB', 'LET_PB0', 'D_PB0', 'masks', 'tc', 'd', 'nHist', 'letMethods', '-v7.3');
+save(fullfile(outDir, [planName outTag '_MCLET.mat']), 'Dtot', 'LET_MC', 'LET_PB', 'D_PB', 'LET_PB0', 'D_PB0', 'masks', 'tc', 'd', 'nHist', 'letMethods', 'wMC', '-v7.3');
 fprintf('\nSaved to %s\n', outDir);
 
 %% ---------------- helpers -------------------------------------------------
