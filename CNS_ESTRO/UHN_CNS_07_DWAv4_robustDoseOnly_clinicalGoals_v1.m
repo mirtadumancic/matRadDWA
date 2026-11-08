@@ -13,6 +13,9 @@
 %      goals again, plus LETd (RayStation-style: every voxel with dose).
 %   4  table: goal | limit | PB nominal | PB worst scenario | MCsquare nominal, pass/fail.
 %      Fill in the RayStation column by hand from the approved plan's clinical goals.
+%   5  MCsquare DVH csv and RayStation-style slices (axial, sagittal, coronal): photon,
+%      pencil-beam robust plan, MCsquare dose, MC - PB dose difference, MCsquare LETd.
+%      (cns_runCase also writes metrics.csv, dvh.csv, lvh.csv for the photon and PB plans.)
 %
 % RUN ON THE UHN PC ONLY (patient data), from X:\matRadDWA_LET (MCsquare needs a path
 % without spaces). Outputs go to the case work folder on hospital storage. The goal
@@ -179,4 +182,58 @@ info = struct('alias', alias, 'machine', mc, 'gantryAngles', S.gantryAngles, 'co
     'bixelWidthMm', D.pln.propStf.bixelWidth, 'doseGridMm', r.x, 'nHistMC', S.nHistMC, 'finished', datestr(now, 31));
 cns_writeJson(fullfile(outDir, sprintf('run_info_%s_v1.json', alias)), info);
 disp(G);
+
+%% 5  DVHs (MCsquare) and RayStation-style slices ---------------------------------------
+% cns_runCase already wrote metrics.csv, dvh.csv and lvh.csv (photon + pencil-beam plan) in the case folder.
+grid = struct('doseGrid', D.dij.doseGrid, 'ctGrid', D.dij.ctGrid);
+clear D                                                      % free the 9-scenario dij before the CT-grid cubes
+if S.runMC
+    gD = (0:0.1:65)'; dv = {};
+    for i = 1:size(cstD, 1)
+        if isempty(cstD{i,4}{1}), continue; end
+        d = Dm(cstD{i,4}{1}); v = 100 * arrayfun(@(x) mean(d >= x), gD);
+        dv(end+1, :) = {repmat(cstD(i,2), numel(gD), 1), gD, v}; %#ok<SAGROW>
+    end
+    Tdv = table(vertcat(dv{:,1}), vertcat(dv{:,2}), vertcat(dv{:,3}), 'VariableNames', {'structure', 'dose_GyRBE', 'volume_pct'});
+    writetable(Tdv, fullfile(outDir, sprintf('dvh_MCsquare_%s_%s_v1.csv', alias, mc)));
+end
+try
+    toCT = @(c) single(matRad_interp3(grid.doseGrid.x, grid.doseGrid.y', grid.doseGrid.z, double(c), ...
+        grid.ctGrid.x, grid.ctGrid.y', grid.ctGrid.z, 'linear', 0));
+    pan = struct('cube', {}, 'type', {}, 'title', {}, 'row', {}, 'col', {}, 'doseForMask', {});
+    if ~isempty(refDose)
+        t = refDose.toTotal; if isnan(t), t = nFx; end
+        pan(end+1) = struct('cube', single(double(refDose.cube) * t), 'type', 'dose', 'title', 'Photon (delivered)', 'row', 1, 'col', 1, 'doseForMask', []);
+    end
+    DpbCT = toCT(Dnom);
+    pan(end+1) = struct('cube', DpbCT, 'type', 'dose', 'title', 'DWA robust, pencil beam', 'row', 1, 'col', 2, 'doseForMask', []);
+    if S.runMC
+        DmcCT = toCT(Dm); LmcCT = toCT(Lm);
+        pan(end+1) = struct('cube', DmcCT, 'type', 'dose', 'title', 'DWA robust, MCsquare', 'row', 1, 'col', 3, 'doseForMask', []);
+        pan(end+1) = struct('cube', DmcCT - DpbCT, 'type', 'diff', 'title', '\DeltaDose (MCsquare - pencil beam)', 'row', 2, 'col', 2, 'doseForMask', max(DmcCT, DpbCT));
+        pan(end+1) = struct('cube', LmcCT, 'type', 'let', 'title', 'LET_d, MCsquare', 'row', 2, 'col', 3, 'doseForMask', DmcCT);
+    end
+    contours = struct( ...
+        'name',  {'GTV', 'CTV', 'PTV', 'OpticNerve_L', 'OpticNerve_R', 'Chiasm', 'Brainstem', 'Eye_L', 'Eye_R', 'Body'}, ...
+        'color', {[0.15 0.55 0.15], [0.85 0.10 0.85], [0.30 0.60 1.00], [1.00 0.85 0.10], [1.00 0.85 0.10], ...
+                  [0.20 0.95 0.95], [0.95 0.60 0.20], [0.60 0.80 1.00], [0.60 0.80 1.00], [0.20 0.75 0.20]}, ...
+        'label', {'', 'CTV', '', 'ON_L', 'ON_R', 'Chiasm', 'Brainstem', '', '', ''}, ...
+        'labelOffsetMm', {[0 0], [-22 -18], [0 0], [25 -10], [-25 -10], [18 -20], [20 -15], [0 0], [0 0], [0 0]});
+    set(0, 'DefaultFigureVisible', 'off');
+    for pl = {'axial', 'sagittal', 'coronal'}
+        oS = struct('plane', pl{1}, 'centreOn', 'CTV', 'rxGy', rx, 'washMinPct', 50, 'isoPct', [50 95 107], ...
+            'letWindow', [1 8], 'letMinDoseGy', 0.1 * rx, 'diffWindow', [-3 3], 'diffUnit', '\DeltaDose (Gy(RBE))', ...
+            'contours', contours, 'crop', {{'Brain', 'Eye_L', 'Eye_R'}}, 'cropMarginMm', 15, 'background', 'dark');
+        base = fullfile(outDir, sprintf('fig_slices_%s_%s_v1', pl{1}, alias));
+        try
+            cns_figSliceRS(P.ct, P.cst, pan, oS, base);
+            fprintf('[UHN_CNS_07] %s.png\n', base);
+        catch err
+            fprintf(2, '[UHN_CNS_07] slice figure %s failed: %s\n', pl{1}, err.message);
+        end
+    end
+    set(0, 'DefaultFigureVisible', 'on');
+catch err
+    fprintf(2, '[UHN_CNS_07] slices failed: %s\n', err.message);
+end
 fprintf('[UHN_CNS_07] done. Table: %s\n', fullfile(outDir, sprintf('clinicalGoals_%s_%s_v1.csv', alias, mc)));
