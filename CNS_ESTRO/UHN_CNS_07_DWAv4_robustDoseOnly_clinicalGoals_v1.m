@@ -68,8 +68,12 @@ if S.smoke                                   % quick test: same pipeline, coarse
     % spot spacing as in the real run: the DWA spot is narrow (sigma in air ~1.2-1.8 mm),
     % coarser spacing gives striped dose and hot spots (smoke test with 10 mm, Nov 8)
     study.optimisation.maxIter = 80;
+    if isfield(S, 'smokeNominal') && S.smokeNominal   % plan-quality check without the 9 scenarios
+        study.robustness = struct('scenarios', 'nomScen', 'objective', 'none');
+        smokeTag = '_SMOKEnom';
+    end
     S.nHistMC = 1e5;
-    smokeTag = '_SMOKE';
+    if isempty(smokeTag), smokeTag = '_SMOKE'; end
     fprintf(2, '[UHN_CNS_07] SMOKE TEST: study spot spacing, 80 iterations, 1e5 MC protons. Numbers are NOT final results.\n');
 end
 

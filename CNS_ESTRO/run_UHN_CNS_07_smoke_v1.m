@@ -12,11 +12,14 @@ dataRoot = 'C:/Users/t146774uhn/Documents/UHN_Test_Patient_Data';
 pat = struct('caseFile', fullfile(dataRoot, 'Patient1', 'CNS_01.json'), ...
     'gantryAngles', [270 100 75], 'couchAngles', [0 0 300], 'label', 'CNS_01');   % Patient 1
 
+smokeNominal = true;    % true: nominal plan only (no robust scenarios) = plan-quality check, low memory
+                        % false: full robust 9-scenario pipeline
 here = fileparts(mfilename('fullpath'));
+diary(fullfile(dataRoot, sprintf('UHN_CNS_07_smoke_log_%s.txt', datestr(now, 'yyyy-mm-dd_HHMM')))); diary on
 script = fullfile(here, 'UHN_CNS_07_DWAv4_robustDoseOnly_clinicalGoals_v1.m');
 S_override = struct('caseFile', pat.caseFile, 'gantryAngles', pat.gantryAngles, ...
     'couchAngles', pat.couchAngles, 'setLabel', ['RS_approved_' pat.label], ...
-    'geometryOnly', false, 'runMC', true, 'smoke', true, 'forceDij', true);
+    'geometryOnly', false, 'runMC', true, 'smoke', true, 'smokeNominal', smokeNominal, 'forceDij', true);
 tSmoke = tic;
 try
     run(script);
@@ -32,6 +35,7 @@ if exist('outDir', 'var') && exist(outDir, 'dir')
     f = dir(fullfile(outDir, '*.*')); f = f(~[f.isdir]);
     fprintf('Files written in %s:\n', outDir); fprintf('  %s\n', f.name);
 end
+diary off
 fprintf('Check: robust plan, PB worst-scenario table, MCsquare table and slice figures should all be listed.\n');
 
 function o = ifelse(c, a, b)
