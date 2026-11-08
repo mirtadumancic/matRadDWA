@@ -95,7 +95,12 @@ nRow = max([panels.row]); nCol = max([panels.col]);
 if isempty(box), box = [0 xq(end) 0 yq(end)]; end
 aspect = (box(4) - box(3)) / (box(2) - box(1));
 W = g('widthCm', 17.5);
-cbW = 0.11;                                   % fraction of width for colour bars
+% colour bars in a strip at the right: one per panel type in a row (e.g. Delta dose and LETd)
+nTypeMax = 1;
+for r = 1:max([panels.row])
+    nTypeMax = max(nTypeMax, numel(unique({panels([panels.row] == r).type})));
+end
+cbW = 0.11 + 0.09 * (nTypeMax - 1);           % fraction of width for colour bars
 panW = W * (1 - cbW) / nCol;
 H = nRow * (panW * aspect + 0.75) + 0.3;
 f = cns_journalFigure(W, H);
@@ -180,27 +185,20 @@ for p = 1:numel(panels)
     title(ax, P.title, 'Color', fg, 'FontSize', 8, 'FontWeight', 'normal', 'Visible', 'on', 'Interpreter', 'tex');
 end
 
-% ---- colour bars: the rightmost panel's type at the right of the row; any other type in the
-% same row (e.g. Delta dose next to LETd) in a free panel slot of that row, else beside it
-bars = struct('row', {}, 'pos', {}, 'type', {}, 'side', {});
+% ---- colour bars: one per panel type in each row, in the right strip, in the left-to-right
+% order of the panels (rows with two bars label them along the bar instead of on top)
+bars = struct('row', {}, 'pos', {}, 'type', {}, 'nInRow', {});
 topPad = max(0.08, 1.0 / H);                     % room for the colour-bar title (>= 1 cm)
 for r = 1:nRow
     E = rowExtra([rowExtra.row] == r);
     if isempty(E), continue; end
-    [~, o] = sort([E.col], 'descend'); E = E(o);
+    [~, o] = sort([E.col]); E = E(o);
     types = {};
     for e = 1:numel(E), if ~any(strcmp(types, E(e).type)), types{end+1} = E(e).type; end, end %#ok<AGROW>
     y = 1 - r / nRow + 0.06; h = 1 / nRow - 0.06 - topPad;
-    bars(end+1) = struct('row', r, 'pos', [1 - cbW + 0.015, y, 0.022, h], 'type', types{1}, 'side', 'right'); %#ok<AGROW>
-    for t = 2:numel(types)
-        cT = min([E(strcmp({E.type}, types{t})).col]);           % leftmost panel of that type
-        free = find(~used(r, 1:cT - 1), 1, 'last');
-        if ~isempty(free)       % right edge of the free slot, labels to the left
-            xR = 0.01 + free * (1 - cbW) / nCol - 0.02;
-            bars(end+1) = struct('row', r, 'pos', [xR - 0.022, y, 0.022, h], 'type', types{t}, 'side', 'left'); %#ok<AGROW>
-        else                    % no free slot: second bar in the right strip
-            bars(end+1) = struct('row', r, 'pos', [1 - cbW + 0.065, y, 0.018, h], 'type', types{t}, 'side', 'right'); %#ok<AGROW>
-        end
+    for t = 1:numel(types)
+        bars(end+1) = struct('row', r, 'pos', [1 - cbW + 0.015 + 0.09 * (t - 1), y, 0.02, h], ...
+            'type', types{t}, 'nInRow', numel(types)); %#ok<AGROW>
     end
 end
 for b = 1:numel(bars)
@@ -226,9 +224,13 @@ for b = 1:numel(bars)
             image(ax, [0 1], diffWin, img); set(ax, 'YDir', 'normal');
             lab = g('diffUnit', '\Delta');
     end
-    set(ax, 'XTick', [], 'YAxisLocation', bars(b).side, 'FontSize', 7, 'XColor', fg, 'YColor', fg, ...
+    set(ax, 'XTick', [], 'YAxisLocation', 'right', 'FontSize', 7, 'XColor', fg, 'YColor', fg, ...
         'TickDir', 'out', 'Box', 'off', 'Color', bg);
-    title(ax, lab, 'Color', fg, 'FontSize', 7, 'FontWeight', 'normal', 'Interpreter', 'tex');
+    if bars(b).nInRow == 1
+        title(ax, lab, 'Color', fg, 'FontSize', 7, 'FontWeight', 'normal', 'Interpreter', 'tex');
+    else
+        ylabel(ax, lab, 'Color', fg, 'FontSize', 7, 'Interpreter', 'tex');
+    end
 end
 
 d = fileparts(base);

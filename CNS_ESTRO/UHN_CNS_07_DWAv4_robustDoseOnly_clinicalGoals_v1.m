@@ -246,6 +246,10 @@ try
     if S.runMC
         DmcCT = toCT(Dm); LmcCT = toCT(Lm);
         pan(end+1) = struct('cube', DmcCT, 'type', 'dose', 'title', 'DWA robust, MCsquare', 'row', 1, 'col', 3, 'doseForMask', []);
+        if ~isempty(refDose)             % (Nov 8) photon - DWA robust MCsquare, absolute, same colour bar
+            DphCT = single(double(refDose.cube) * t);
+            pan(end+1) = struct('cube', DphCT - DmcCT, 'type', 'diff', 'title', '\DeltaDose (photon - DWA MCsquare)', 'row', 2, 'col', 1, 'doseForMask', max(DphCT, DmcCT));
+        end
         pan(end+1) = struct('cube', DmcCT - DpbCT, 'type', 'diff', 'title', '\DeltaDose (MCsquare - pencil beam)', 'row', 2, 'col', 2, 'doseForMask', max(DmcCT, DpbCT));
         pan(end+1) = struct('cube', LmcCT, 'type', 'let', 'title', 'LET_d, MCsquare', 'row', 2, 'col', 3, 'doseForMask', DmcCT);
     end
@@ -258,7 +262,7 @@ try
     set(0, 'DefaultFigureVisible', 'off');
     for pl = {'axial', 'sagittal', 'coronal'}
         oS = struct('plane', pl{1}, 'centreOn', 'CTV', 'rxGy', rx, 'washMinPct', 50, 'isoPct', [50 95 107], ...
-            'letWindow', [1 8], 'letMinDoseGy', 0.1 * rx, 'diffWindow', [-3 3], 'diffUnit', '\DeltaDose (Gy(RBE))', ...
+            'letWindow', [1 8], 'letMinDoseGy', 0.1 * rx, 'diffWindow', [-10 10], 'diffUnit', '\DeltaDose (Gy(RBE))', ...
             'contours', contours, 'crop', {{'Brain', 'Eye_L', 'Eye_R'}}, 'cropMarginMm', 15, 'background', 'dark');
         base = fullfile(outDir, sprintf('fig_slices_%s_%s_v1', pl{1}, alias));
         try
@@ -271,5 +275,41 @@ try
     set(0, 'DefaultFigureVisible', 'on');
 catch err
     fprintf(2, '[UHN_CNS_07] slices failed: %s\n', err.message);
+end
+%% 6  DVH: DWA robust (MCsquare, RBE 1.1) vs photon (delivered), CT grid as the clinical goals
+try
+    if S.runMC && ~isempty(refDose) && exist('DmcCT', 'var')
+        if ~exist('DphCT', 'var'), tR = refDose.toTotal; if isnan(tR), tR = nFx; end, DphCT = single(double(refDose.cube) * tR); end
+        sDvh = {'CTV', 'PTV', 'GTV', 'Brainstem', 'Chiasm', 'OpticNerve_L', 'OpticNerve_R', 'Pituitary', ...
+                'Hippocampus_L', 'Hippocampus_R', 'Cochlea_L', 'Cochlea_R'};
+        sDvh = sDvh(cellfun(@(n) any(strcmp(P.cst(:,2), n)) && ~isempty(P.cst{find(strcmp(P.cst(:,2), n), 1), 4}{1}), sDvh));
+        gx = (0:0.1:65)'; rowsD = {};
+        nC = 4; nR = ceil(numel(sDvh) / nC);
+        set(0, 'DefaultFigureVisible', 'off');
+        fD = cns_journalFigure(17.5, 4.0 * nR + 0.8);
+        cMC = [0.00 0.45 0.74]; cPh = [0 0 0];
+        for iS = 1:numel(sDvh)
+            v = P.cst{find(strcmp(P.cst(:,2), sDvh{iS}), 1), 4}{1};
+            vm = 100 * arrayfun(@(x) mean(DmcCT(v) >= x), gx);
+            vp = 100 * arrayfun(@(x) mean(DphCT(v) >= x), gx);
+            ax = subplot(nR, nC, iS); hold(ax, 'on'); grid(ax, 'on');
+            h1 = plot(ax, gx, vp, '-', 'Color', cPh, 'LineWidth', 1.2);
+            h2 = plot(ax, gx, vm, '-', 'Color', cMC, 'LineWidth', 1.2);
+            xline(ax, rx, ':', 'Color', [0.4 0.4 0.4]);
+            xlim(ax, [0 62]); ylim(ax, [0 102]);
+            title(ax, strrep(sDvh{iS}, '_', ' '), 'FontWeight', 'normal');
+            if mod(iS - 1, nC) == 0, ylabel(ax, 'Volume (%)'); end
+            if iS > numel(sDvh) - nC, xlabel(ax, 'Dose (Gy(RBE))'); end
+            if iS == 1, legend(ax, [h1 h2], {'Photon (delivered)', 'DWA robust, MCsquare'}, 'Location', 'southwest'); end
+            rowsD = [rowsD; [repmat(sDvh(iS), numel(gx), 1), num2cell(gx), num2cell(vp), num2cell(vm)]]; %#ok<AGROW>
+        end
+        baseD = fullfile(outDir, sprintf('fig_DVH_DWArobustMC_vs_photon_%s_v1', alias));
+        cns_saveJournalFigure(fD, baseD, {'structure', 'dose_GyRBE', 'photon_volume_pct', 'DWA_MCsquare_volume_pct'}, rowsD);
+        close(fD); set(0, 'DefaultFigureVisible', 'on');
+        fprintf('[UHN_CNS_07] %s.png\n', baseD);
+    end
+catch err
+    set(0, 'DefaultFigureVisible', 'on');
+    fprintf(2, '[UHN_CNS_07] DVH figure failed: %s\n', err.message);
 end
 fprintf('[UHN_CNS_07] done. Table: %s\n', fullfile(outDir, sprintf('clinicalGoals_%s_%s_v1.csv', alias, mc)));

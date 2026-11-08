@@ -19,6 +19,8 @@ machines = machinesAll(~strcmp(machinesAll, refLabel));   % proton machines; the
 plans = unique({dvh.plan}, 'stable');
 plans = plans(~strcmp(plans, 'clinical'));
 cols = lines(max(numel(plans), 1));
+showMcN = logical(cns_getfield(F, 'showMcNamara', true));      % (Nov 8) off in the robust DWA study
+if ~showMcN && isfield(dvh, 'quantity'), dvh = dvh(~strcmp({dvh.quantity}, 'McN')); end
 
 % ---- 1) target DVH: CTV and PTV, RBE 1.1 (solid) and McNamara (dashed)
 tg = {'CTV', 'PTV'};
@@ -35,7 +37,7 @@ for r = 1:2
         if r == 1 && m == 1 && ~isempty(h), legend(h, lab, 'Interpreter', 'none', 'Location', 'southwest'); end
     end
 end
-annotation('textbox', [0 0.95 1 0.05], 'String', sprintf('%s: solid RBE 1.1, dashed McNamara%s', alias, ...
+annotation('textbox', [0 0.95 1 0.05], 'String', sprintf('%s: RBE 1.1%s%s', alias, ifelse(showMcN, ' solid, McNamara dashed', ''), ...
     ifelse(hasRef, sprintf(', black = %s clinical plan', refLabel), '')), ...
     'EdgeColor', 'none', 'HorizontalAlignment', 'center', 'Interpreter', 'none');
 saveFig(f, fullfile(figDir, 'dvh_targets'));
