@@ -33,7 +33,7 @@ S.setLabel  = 'RS_approved_3beam';
 S.runMC     = true;                       % MCsquare recalculation of the nominal plan
 S.nHistMC   = 2e7;
 S.forceDij  = false;                      % true: recompute the robust dij even if cached
-S.smoke     = false;                      % true: quick end-to-end test (10 mm spots, 30 iterations,
+S.smoke     = false;                      % true: quick end-to-end test (study spots, 80 iterations,
                                           % 1e5 MC protons) in a separate <alias>_DWAv4rob_SMOKE folder
 S.geometryOnly = true;                    % first run: only the beam-geometry figure, then stop.
                                           % Check the beams against RayStation, then set false.
@@ -65,11 +65,12 @@ nFx = caseCfg0.prescription.numOfFractions;
 goals = study.clinicalGoals.list;
 smokeTag = '';
 if S.smoke                                   % quick test: same pipeline, coarse settings, own folder
-    study.stf.bixelWidthMm.(mc) = 10;
-    study.optimisation.maxIter = 30;
+    % spot spacing as in the real run: the DWA spot is narrow (sigma in air ~1.2-1.8 mm),
+    % coarser spacing gives striped dose and hot spots (smoke test with 10 mm, Nov 8)
+    study.optimisation.maxIter = 80;
     S.nHistMC = 1e5;
     smokeTag = '_SMOKE';
-    fprintf(2, '[UHN_CNS_07] SMOKE TEST: 10 mm spots, 30 iterations, 1e5 MC protons. Numbers are NOT clinical results.\n');
+    fprintf(2, '[UHN_CNS_07] SMOKE TEST: study spot spacing, 80 iterations, 1e5 MC protons. Numbers are NOT final results.\n');
 end
 
 caseCfg = caseCfg0;
@@ -144,7 +145,7 @@ for s = 1:nS
     vals(:, s) = T.value;
     if s == 1, Tn = T; Tn.evaluation(:) = {'PB nominal'}; Dnom = Ds; end
 end
-isMin = cellfun(@(g) strcmp(g.comparator, '>='), cns_toCell(goals));
+isMin = cellfun(@(g) strcmp(g.comparator, '>='), cns_toCell(goals)); isMin = isMin(:);   % column, as worst (bug: 25x25 pass matrix)
 worst = max(vals, [], 2); worst(isMin) = min(vals(isMin, :), [], 2);
 Tw = Tn; Tw.evaluation(:) = {'PB worst scenario'}; Tw.value = worst;
 Tw.pass = double((isMin & worst >= Tw.limit - 1e-9) | (~isMin & worst <= Tw.limit + 1e-9));

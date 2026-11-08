@@ -2,7 +2,7 @@
 % Quick end-to-end test of UHN_CNS_07 on ONE patient before the overnight run
 % (about 5-10 min): robust 9-scenario dij, IPOPT, clinical goals (PB nominal and
 % worst), photon reference, MCsquare, tables and slice figures, all with coarse
-% settings (10 mm spots, 30 iterations, 1e5 MC protons). Written to a separate
+% settings (study spot spacing, 80 iterations, 1e5 MC protons). Written to a separate
 % <alias>_DWAv4rob_SMOKE folder, so the caches of the real run are not touched.
 % The numbers are NOT results: this only shows that every step runs.
 %

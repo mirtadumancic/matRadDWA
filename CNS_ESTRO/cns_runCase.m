@@ -73,7 +73,8 @@ for m = 1:numel(machines)
     % (Nov 8) spots only on study.stf.spotTargets (e.g. CTV): the robust margin is added by
     % matRad; spots on the PTV + robust margin double the spot count and run out of memory
     spotTargets = cns_toCell(cns_getfield(study, 'stf.spotTargets', {}));
-    spotKey = strjoin(sort(spotTargets), ',');
+    bwKey = cns_getfield(study, ['stf.bixelWidthMm.' machine], cns_getfield(study, 'stf.bixelWidthMm.default', 5));
+    spotKey = sprintf('%s|bw%gmm', strjoin(sort(spotTargets), ','), bwKey);   % cache key: targets + spacing
     useCache = exist(dijFile, 'file') && ~forceDij;
     if useCache
         Sk = whos('-file', dijFile);
