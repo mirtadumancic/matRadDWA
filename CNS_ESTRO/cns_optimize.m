@@ -40,12 +40,33 @@ if strcmpi(used, 'IPOPT')
     end
 end
 
-if isempty(w0)
-    resultGUI = matRad_fluenceOptimization(dij, cst, pln);
-else
-    resultGUI = matRad_fluenceOptimization(dij, cst, pln, w0);
+% (Nov 8) keep the result cubes on the dose grid: matRad_fluenceOptimization computes
+% cubes for every robust scenario and would interpolate all of them to the sub-mm CT
+% (out of memory in matRad_calcCubes). Only the weights are used downstream.
+matRad_cfg = MatRad_Config.instance();
+hadFlag = isstruct(matRad_cfg.defaults) && isfield(matRad_cfg.defaults, 'calcCubesInterpToCtGrid');
+oldFlag = true; if hadFlag, oldFlag = matRad_cfg.defaults.calcCubesInterpToCtGrid; end
+matRad_cfg.defaults.calcCubesInterpToCtGrid = false;
+try
+    if isempty(w0)
+        resultGUI = matRad_fluenceOptimization(dij, cst, pln);
+    else
+        resultGUI = matRad_fluenceOptimization(dij, cst, pln, w0);
+    end
+catch err
+    restoreFlag(matRad_cfg, hadFlag, oldFlag);
+    rethrow(err);
 end
+restoreFlag(matRad_cfg, hadFlag, oldFlag);
 usedOptimizer = used;
+end
+
+function restoreFlag(matRad_cfg, had, oldFlag)
+if had
+    matRad_cfg.defaults.calcCubesInterpToCtGrid = oldFlag;
+elseif isfield(matRad_cfg.defaults, 'calcCubesInterpToCtGrid')
+    matRad_cfg.defaults = rmfield(matRad_cfg.defaults, 'calcCubesInterpToCtGrid');
+end
 end
 
 function [ok, why] = ipoptWorks()

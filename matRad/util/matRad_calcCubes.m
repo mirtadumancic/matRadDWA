@@ -231,7 +231,14 @@ end
 resultGUI = orderfields(resultGUI);
 
 % interpolation if dose grid does not match ct grid
-if isfield(dij,'ctGrid') && any(dij.ctGrid.dimensions~=dij.doseGrid.dimensions)
+% (local change, Nov 8 2026) can be switched off to keep the cubes on the dose grid, e.g.
+% after robust optimisation, where 10 scenarios x all fields on a sub-mm CT run out of memory:
+%   matRad_cfg = MatRad_Config.instance(); matRad_cfg.defaults.calcCubesInterpToCtGrid = false;
+interpToCt = true;
+if isstruct(matRad_cfg.defaults) && isfield(matRad_cfg.defaults, 'calcCubesInterpToCtGrid')
+    interpToCt = logical(matRad_cfg.defaults.calcCubesInterpToCtGrid);
+end
+if interpToCt && isfield(dij,'ctGrid') && any(dij.ctGrid.dimensions~=dij.doseGrid.dimensions)
     myFields = fieldnames(resultGUI);
     for i = 1:numel(myFields)
         if numel(resultGUI.(myFields{i})) == dij.doseGrid.numOfVoxels

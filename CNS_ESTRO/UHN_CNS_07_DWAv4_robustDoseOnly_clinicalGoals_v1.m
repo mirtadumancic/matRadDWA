@@ -128,13 +128,19 @@ cstD = matRad_resizeCstToGrid(P.cst, D.dij.ctGrid.x, D.dij.ctGrid.y, D.dij.ctGri
     D.dij.doseGrid.x, D.dij.doseGrid.y, D.dij.doseGrid.z);
 w = cns_normaliseWeights(W.w, D.dij, cstD, caseCfg, study, refDose, P.cst);
 r = D.dij.doseGrid.resolution; voxCc = r.x * r.y * r.z / 1000;
+% (Nov 8) clinical goals on the CT grid (as the photon plan and RayStation): small OARs
+% (lenses, chiasm, cochleae, pituitary) are badly sampled or empty on the 3 mm dose grid.
+% One cube at a time (a sub-mm CT cube is ~0.5 GB).
+gG = D.dij; rc = P.ct.resolution; voxCcCT = rc.x * rc.y * rc.z / 1000;
+dose2ct = @(c) matRad_interp3(gG.doseGrid.x, gG.doseGrid.y', gG.doseGrid.z, double(c), ...
+    gG.ctGrid.x, gG.ctGrid.y', gG.ctGrid.z, 'linear', 0);
 ms = cns_buildPln(P.ct, P.cst, caseCfg, study, mc); ms = ms.multScen;
 nS = ms.totNumScen;
 Tn = []; vals = nan(numel(cns_toCell(goals)), nS);
 for s = 1:nS
     lm = ms.linearMask(s, :);
     Ds = reshape(full(D.dij.physicalDose{lm(1), lm(2), lm(3)} * w), D.dij.doseGrid.dimensions) * 1.1 * nFx;
-    T = cns_clinicalGoals(Ds, cstD, voxCc, goals, sprintf('PB scenario %d', s));
+    T = cns_clinicalGoals(dose2ct(Ds), P.cst, voxCcCT, goals, sprintf('PB scenario %d', s));
     vals(:, s) = T.value;
     if s == 1, Tn = T; Tn.evaluation(:) = {'PB nominal'}; Dnom = Ds; end
 end
@@ -173,7 +179,7 @@ if S.runMC
         Dm = matRad_interp3(g.ctGrid.x, g.ctGrid.y', g.ctGrid.z, Dm, g.doseGrid.x, g.doseGrid.y', g.doseGrid.z, 'linear', 0);
         Lm = matRad_interp3(g.ctGrid.x, g.ctGrid.y', g.ctGrid.z, Lm, g.doseGrid.x, g.doseGrid.y', g.doseGrid.z, 'nearest', 0);
     end
-    Tm = cns_clinicalGoals(Dm, cstD, voxCc, goals, 'MCsquare nominal');
+    Tm = cns_clinicalGoals(dose2ct(Dm), P.cst, voxCcCT, goals, 'MCsquare nominal');
     fprintf('[UHN_CNS_07] MCsquare (%.0e protons, %.0f s): %d / %d goals met\n', S.nHistMC, toc(t0), ...
         sum(Tm.pass, 'omitnan'), nnz(~isnan(Tm.pass)));
     % LETd (MCsquare, every voxel with dose) and PB-vs-MC dose agreement in the CTV
