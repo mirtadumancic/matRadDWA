@@ -102,7 +102,8 @@ f = cns_journalFigure(W, H);
 set(f, 'Color', bg, 'InvertHardcopy', 'off');
 try, set(f, 'Theme', 'light'); catch, end %#ok<NOCOM>
 saved = struct('plane', plane, 'slice', k, 'pixelMm', [dr dc], 'ct', ctS, 'panels', {{}});
-rowTypes = cell(1, nRow);
+rowExtra = struct('row', {}, 'col', {}, 'type', {});   % other types in the same row (Nov 8)
+used = false(nRow, nCol);
 
 for p = 1:numel(panels)
     P = panels(p);
@@ -114,20 +115,22 @@ for p = 1:numel(panels)
         case 'dose'
             pct = 100 * U / rx;
             [col, a] = doseColour(pct, washMin);
-            rowTypes{P.row} = 'dose';
+            pType = 'dose';
         case 'let'
             Dm = up(getSlice(double(P.doseForMask), k, plane, ct.resolution), dr, dc, px, 'linear');
             t = (U - letWin(1)) / diff(letWin);
             col = mapColour(t, letMap());
             a = 0.70 * (Dm >= letMinDose & U > 0);
-            rowTypes{P.row} = 'let';
+            pType = 'let';
         case 'diff'
             Dm = up(getSlice(double(P.doseForMask), k, plane, ct.resolution), dr, dc, px, 'linear');
             t = (U - diffWin(1)) / diff(diffWin);
             col = mapColour(t, divMap());
             a = 0.75 * min(1, abs(U) / (0.1 * max(abs(diffWin)))) .* (Dm >= letMinDose);
-            rowTypes{P.row} = 'diff';
+            pType = 'diff';
     end
+    used(P.row, P.col) = true;
+    rowExtra(end+1) = struct('row', P.row, 'col', P.col, 'type', pType); %#ok<AGROW>
     a3 = repmat(a, [1 1 3]);
     rgb = (1 - a3) .* rgb + a3 .* col;
 
@@ -177,12 +180,32 @@ for p = 1:numel(panels)
     title(ax, P.title, 'Color', fg, 'FontSize', 8, 'FontWeight', 'normal', 'Visible', 'on', 'Interpreter', 'tex');
 end
 
-% ---- one colour bar per row, at the right
+% ---- colour bars: the rightmost panel's type at the right of the row; any other type in the
+% same row (e.g. Delta dose next to LETd) in a free panel slot of that row, else beside it
+bars = struct('row', {}, 'pos', {}, 'type', {}, 'side', {});
+topPad = max(0.08, 1.0 / H);                     % room for the colour-bar title (>= 1 cm)
 for r = 1:nRow
-    if isempty(rowTypes{r}), continue; end
-    topPad = max(0.08, 1.0 / H);                 % room for the colour-bar title (>= 1 cm)
-    ax = axes('Parent', f, 'Position', [1 - cbW + 0.015, 1 - r / nRow + 0.06, 0.022, 1 / nRow - 0.06 - topPad]);
-    switch rowTypes{r}
+    E = rowExtra([rowExtra.row] == r);
+    if isempty(E), continue; end
+    [~, o] = sort([E.col], 'descend'); E = E(o);
+    types = {};
+    for e = 1:numel(E), if ~any(strcmp(types, E(e).type)), types{end+1} = E(e).type; end, end %#ok<AGROW>
+    y = 1 - r / nRow + 0.06; h = 1 / nRow - 0.06 - topPad;
+    bars(end+1) = struct('row', r, 'pos', [1 - cbW + 0.015, y, 0.022, h], 'type', types{1}, 'side', 'right'); %#ok<AGROW>
+    for t = 2:numel(types)
+        cT = min([E(strcmp({E.type}, types{t})).col]);           % leftmost panel of that type
+        free = find(~used(r, 1:cT - 1), 1, 'last');
+        if ~isempty(free)       % right edge of the free slot, labels to the left
+            xR = 0.01 + free * (1 - cbW) / nCol - 0.02;
+            bars(end+1) = struct('row', r, 'pos', [xR - 0.022, y, 0.022, h], 'type', types{t}, 'side', 'left'); %#ok<AGROW>
+        else                    % no free slot: second bar in the right strip
+            bars(end+1) = struct('row', r, 'pos', [1 - cbW + 0.065, y, 0.018, h], 'type', types{t}, 'side', 'right'); %#ok<AGROW>
+        end
+    end
+end
+for b = 1:numel(bars)
+    ax = axes('Parent', f, 'Position', bars(b).pos);
+    switch bars(b).type
         case 'dose'
             stops = [50 90 95 107 120 140 160];
             stops = stops(stops >= washMin);
@@ -203,7 +226,7 @@ for r = 1:nRow
             image(ax, [0 1], diffWin, img); set(ax, 'YDir', 'normal');
             lab = g('diffUnit', '\Delta');
     end
-    set(ax, 'XTick', [], 'YAxisLocation', 'right', 'FontSize', 7, 'XColor', fg, 'YColor', fg, ...
+    set(ax, 'XTick', [], 'YAxisLocation', bars(b).side, 'FontSize', 7, 'XColor', fg, 'YColor', fg, ...
         'TickDir', 'out', 'Box', 'off', 'Color', bg);
     title(ax, lab, 'Color', fg, 'FontSize', 7, 'FontWeight', 'normal', 'Interpreter', 'tex');
 end

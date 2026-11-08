@@ -72,9 +72,10 @@ if S.smoke                                   % quick test: same pipeline, coarse
         study.robustness = struct('scenarios', 'nomScen', 'objective', 'none');
         smokeTag = '_SMOKEnom';
     end
-    S.nHistMC = 1e5;
+    if ~isfield(S, 'smokeNHistMC'), S.smokeNHistMC = 2e6; end   % 1e5 was too noisy for ~3000 spots (Nov 8)
+    S.nHistMC = S.smokeNHistMC;
     if isempty(smokeTag), smokeTag = '_SMOKE'; end
-    fprintf(2, '[UHN_CNS_07] SMOKE TEST: study spot spacing, 80 iterations, 1e5 MC protons. Numbers are NOT final results.\n');
+    fprintf(2, '[UHN_CNS_07] SMOKE TEST: study spot spacing, 80 iterations, %.0e MC protons. Numbers are NOT final results.\n', S.nHistMC);
 end
 
 caseCfg = caseCfg0;
