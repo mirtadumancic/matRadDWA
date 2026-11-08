@@ -96,7 +96,8 @@ letWeights = struct('DWA_proton_v3', 0, ...      % 0 = dose-only reference (as A
 robust         = true;
 shiftSD_mm     = 3;          % setup uncertainty, each axis
 rangeRelSD_pct = 3.5;        % range (density) uncertainty
-rangeAbsSD_mm  = 0;          % added to the relative range error (matRad default 1 mm)
+rangeAbsSD_mm  = 0;          % added to the relative range error (matRad default 1 mm); 0 is replaced by 1e-3 mm
+                             % because matRad's scenario model needs a non-zero SD (singular covariance otherwise)
 wcCombinations = 'none';     % 'none' = 9 scenarios; 'all' = 81 (includes diagonal shifts)
 robustType     = 'COWC';     % composite worst case on the CTV objectives
 mcRecalcFor = [];        % LET weights whose final dose is recalculated with MCsquare, e.g. [0 10]
@@ -250,7 +251,7 @@ for m = 1:numel(machines)
             pln.multScen = matRad_multScen(ct, 'wcScen');
             pln.multScen.shiftSD     = shiftSD_mm * [1 1 1];
             pln.multScen.rangeRelSD  = rangeRelSD_pct;
-            pln.multScen.rangeAbsSD  = rangeAbsSD_mm;
+            pln.multScen.rangeAbsSD  = max(rangeAbsSD_mm, 1e-3);   % 0 -> 1e-3 mm (scenario probabilities need SD > 0)
             pln.multScen.wcSigma     = 1;
             pln.multScen.combinations = wcCombinations;
             fprintf('  robust optimisation: %d scenarios (%s), shift %.1f mm, range %.1f %% + %.1f mm\n', ...
