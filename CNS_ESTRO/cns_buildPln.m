@@ -46,6 +46,8 @@ if ~isempty(cut), pln.propDoseCalc.geometricLateralCutOff = cut; end
 dcut = cns_getfield(study, 'doseCalc.dosimetricLateralCutOff', []);      % (Nov 8) e.g. 0.99 to save memory
 if ~isempty(dcut), pln.propDoseCalc.dosimetricLateralCutOff = dcut; end
 pln.propDoseCalc.calcLET = cns_getfield(study, 'doseCalc.calcLET', 1);    % (Nov 8) 0 = no LET dij
+tod = cns_getfield(study, 'doseCalc.traceOnDoseGrid', false);           % (Nov 8) ray tracing on the dose grid:
+pln.propDoseCalc.traceOnDoseGrid = logical(tod);                         % patient CTs (sub-mm) run out of memory otherwise
 r = cns_getfield(study, 'doseCalc.doseGridMm', 3);
 pln.propDoseCalc.doseGrid.resolution = struct('x', r, 'y', r, 'z', r);
 

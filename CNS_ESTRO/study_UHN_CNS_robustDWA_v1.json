@@ -6,6 +6,8 @@
   ],
   "referenceMachine": "DWA_proton_v4",
   "stf": {
+    "spotTargets": ["CTV"],
+    "_note_spotTargets": "Spots on the CTV only (+ matRad robustness margin, 3 mm / 3.5 %). The PTV has no objectives in the robust plan; spots on PTV + robust margin doubled the spot count and ran out of memory (Nov 8).",
     "bixelWidthMm": {
       "DWA_proton_v2": 3,
       "Generic": 5,
@@ -27,6 +29,8 @@
     "doseGridMm": 3,
     "dosimetricLateralCutOff": 0.99,
     "calcLET": 0,
+    "traceOnDoseGrid": true,
+    "_note_trace": "Radiological depth traced on the 3 mm dose grid. Tracing on the sub-mm patient CT ran out of memory in matRad_RayTracerSiddon (16 GB, Nov 8).",
     "_note": "calcLET 0: no LET dij in the robust optimisation (memory); LETd comes from the MCsquare recalculation in UHN_CNS_07."
   },
   "robustness": {

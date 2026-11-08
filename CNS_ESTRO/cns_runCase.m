@@ -70,7 +70,23 @@ info = struct('alias', alias, 'dataClass', dataClass, 'study', cns_getfield(stud
 for m = 1:numel(machines)
     machine = machines{m};
     dijFile = fullfile(caseDir, ['dij_' machine '.mat']);
-    if exist(dijFile, 'file') && ~forceDij
+    % (Nov 8) spots only on study.stf.spotTargets (e.g. CTV): the robust margin is added by
+    % matRad; spots on the PTV + robust margin double the spot count and run out of memory
+    spotTargets = cns_toCell(cns_getfield(study, 'stf.spotTargets', {}));
+    spotKey = strjoin(sort(spotTargets), ',');
+    useCache = exist(dijFile, 'file') && ~forceDij;
+    if useCache
+        Sk = whos('-file', dijFile);
+        cachedKey = '';
+        if any(strcmp({Sk.name}, 'spotKey')), Sc = load(dijFile, 'spotKey'); cachedKey = Sc.spotKey; end
+        if ~strcmp(cachedKey, spotKey)
+            fprintf('[cns] %s: cached dij has spot targets {%s}, study asks {%s}: recomputing\n', ...
+                machine, cachedKey, spotKey);
+            useCache = false;
+        end
+    end
+    dijFresh = ~useCache;
+    if useCache
         fprintf('[cns] %s: loading cached dij\n', machine);
         S = load(dijFile, 'pln', 'stf', 'dij');
         pln = S.pln; dij = S.dij; clear S
@@ -80,13 +96,23 @@ for m = 1:numel(machines)
         pln = cns_buildPln(ct, cst, caseCfg, study, machine);
         fprintf('[cns] %s: steering + dose/LET influence matrices...\n', machine);
         t0 = tic;
-        stf = matRad_generateStf(ct, cst, pln);
+        cstStf = cst;
+        if ~isempty(spotTargets)
+            for iS = 1:size(cstStf, 1)
+                if strcmp(cstStf{iS,3}, 'TARGET') && ~any(strcmp(cstStf{iS,2}, spotTargets))
+                    cstStf{iS,3} = 'OAR';
+                end
+            end
+            fprintf('[cns] spots placed on: %s (+ matRad robustness margin)\n', spotKey);
+        end
+        stf = matRad_generateStf(ct, cstStf, pln);
+        clear cstStf
         dij = matRad_calcDoseInfluence(ct, cst, stf, pln);
         if needDirty && hasDirty
             dij = matRad_DirtyDose.addDirtyDoseDij(dij, dirtyThr);
         end
         fprintf('[cns] %s: %d spots, dij in %.0f s\n', machine, dij.totalNumOfBixels, toc(t0));
-        saveMat(dijFile, isOctave, 'pln', pln, 'stf', stf, 'dij', dij);
+        saveMat(dijFile, isOctave, 'pln', pln, 'stf', stf, 'dij', dij, 'spotKey', spotKey);
     end
     cstD = matRad_resizeCstToGrid(cst, dij.ctGrid.x, dij.ctGrid.y, dij.ctGrid.z, ...
         dij.doseGrid.x, dij.doseGrid.y, dij.doseGrid.z);
@@ -112,8 +138,11 @@ for m = 1:numel(machines)
         run = struct('machine', machine, 'plan', P.id, 'status', 'ok', 'notes', {{}}, 'seconds', 0);
         t0 = tic;
         try
-            if exist(wFile, 'file') && reusePlans
-                S = load(wFile, 'w'); w = S.w;
+            wOk = false;
+            if exist(wFile, 'file') && reusePlans && ~dijFresh       % never reuse weights on a new dij
+                S = load(wFile, 'w'); w = S.w; wOk = numel(w) == dij.totalNumOfBixels;
+            end
+            if wOk
                 run.notes{end+1} = 'weights reused';
             else
                 [cstRun, notes] = cns_buildCst(cst, caseCfg, study, P, pln);
@@ -124,6 +153,7 @@ for m = 1:numel(machines)
                 if ~strcmpi(optUsed, 'IPOPT'), run.notes{end+1} = ['optimiser ' optUsed]; end
                 w = resultGUI.wUnsequenced;
                 run.optimizerStatus = optStatus(resultGUI);
+                clear resultGUI                       % 10 dose-grid result sets (9 scenarios)
                 saveMat(wFile, isOctave, 'w', w);
             end
             [w, run.normalisationFactor, run.normalisationGoalGy] = ...
@@ -138,6 +168,9 @@ for m = 1:numel(machines)
             run.status = 'failed';
             run.error = err.message;
             fprintf(2, '[cns] %s / %s FAILED: %s\n', machine, P.id, err.message);
+            for kS = 1:min(4, numel(err.stack))      % where it failed (function, line)
+                fprintf(2, '        at %s line %d\n', err.stack(kS).name, err.stack(kS).line);
+            end
         end
         run.seconds = toc(t0);
         info.runs{end+1} = run;

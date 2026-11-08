@@ -33,6 +33,8 @@ S.setLabel  = 'RS_approved_3beam';
 S.runMC     = true;                       % MCsquare recalculation of the nominal plan
 S.nHistMC   = 2e7;
 S.forceDij  = false;                      % true: recompute the robust dij even if cached
+S.smoke     = false;                      % true: quick end-to-end test (10 mm spots, 30 iterations,
+                                          % 1e5 MC protons) in a separate <alias>_DWAv4rob_SMOKE folder
 S.geometryOnly = true;                    % first run: only the beam-geometry figure, then stop.
                                           % Check the beams against RayStation, then set false.
 % Beams of the approved RayStation plans (Mirta, Nov 8):
@@ -61,9 +63,17 @@ mc  = study.machines{1};
 rx  = caseCfg0.prescription.totalDoseGyRBE;
 nFx = caseCfg0.prescription.numOfFractions;
 goals = study.clinicalGoals.list;
+smokeTag = '';
+if S.smoke                                   % quick test: same pipeline, coarse settings, own folder
+    study.stf.bixelWidthMm.(mc) = 10;
+    study.optimisation.maxIter = 30;
+    S.nHistMC = 1e5;
+    smokeTag = '_SMOKE';
+    fprintf(2, '[UHN_CNS_07] SMOKE TEST: 10 mm spots, 30 iterations, 1e5 MC protons. Numbers are NOT clinical results.\n');
+end
 
 caseCfg = caseCfg0;
-caseCfg.alias = [caseCfg0.alias '_DWAv4rob'];
+caseCfg.alias = [caseCfg0.alias '_DWAv4rob' smokeTag];
 caseCfg.beams = struct('setId', S.setLabel, 'gantryAngles', S.gantryAngles, 'couchAngles', S.couchAngles);
 caseDir = fullfile(cns_expandPath(caseCfg.workDir), caseCfg.alias);
 if ~exist(caseDir, 'dir'), mkdir(caseDir); end
@@ -104,7 +114,7 @@ end
 
 %% 1  Robust dose-only plan (+ photon plan evaluation) ------------------------------
 out = cns_runCase(caseFile, studyFile, struct('forceDij', S.forceDij));
-planId = study.plans{1}.id;
+plansC = cns_toCell(study.plans); planId = plansC{1}.id;   % json array -> struct array
 if ~any(strcmp(out.rows(:,2), mc) & strcmp(out.rows(:,3), planId))
     error('The robust plan failed: see the log above.');
 end
