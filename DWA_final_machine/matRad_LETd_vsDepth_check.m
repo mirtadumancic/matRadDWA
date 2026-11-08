@@ -25,7 +25,8 @@
 %   LETd_r60                   sum(D*LET)/sum(D) over r <= 60 mm (IDD-weighted)
 %   nDose, nLET                voxels in the r <= 60 mm slice with dose > 0 / LET > 0
 %   nDose1pct                  voxels with dose > 1 % of the slice maximum of the spot
-% Run HongPB on the Mac, MCsquare on the PC (from X:\, path without spaces):
+% Runs HongPB and MCsquare one after the other on the PC (from X:\, path without spaces).
+% LETd is kept in every voxel with dose (doseWeightingThreshold = 0, as RayStation).
 %   matRad_rc; run('DWA_final_machine/matRad_LETd_vsDepth_check.m')
 
 clear; clc;
@@ -37,7 +38,7 @@ matRad_cfg.disableGUI = true;
 
 %% ---------------- settings ------------------------------------------------
 machineName  = 'DWA_proton_v3';
-engine       = 'HongPB';          % 'HongPB' (Mac) or 'MCsquare' (PC)
+engines      = {'HongPB', 'MCsquare'};   % both on the PC; on the Mac use {'HongPB'} only
 energies     = [70.0 110.0 150.0 200.0];   % nearest machine layers are used
 nHistMC      = 5e6;               % LET in low-dose regions needs more histories than dose
 offsets_mm   = [5 10 20];         % lateral sample positions
@@ -47,8 +48,7 @@ res_mm       = 1;  airGap_mm = 10;
 
 outDir = fullfile(rootDir, 'DWA_final_machine', 'LETd_vsDepth');
 if ~exist(outDir, 'dir'), mkdir(outDir); end
-outFile = fullfile(outDir, sprintf('LETd_%s_%s.csv', machineName, engine));
-if strcmp(engine, 'MCsquare') && any(rootDir == ' ')
+if any(strcmp(engines, 'MCsquare')) && any(rootDir == ' ')
     error('MCsquare fails on paths with spaces: run from X:\\matRadDWA_LET (subst).');
 end
 
@@ -82,6 +82,12 @@ ix0 = round(Nx/2); iz0 = round(Nz/2);                      % beam-axis column
 inDet = XX.^2 + ZZ.^2 <= detRadius_mm^2;
 depth = ct.y(:) - surfaceY;
 
+% LETd in every voxel with dose (RayStation-like), not only above 1 % of the maximum
+matRad_cfg.defaults.doseWeightingThreshold = 0;
+
+for iEng = 1:numel(engines)
+engine  = engines{iEng};
+outFile = fullfile(outDir, sprintf('LETd_%s_%s.csv', machineName, engine));
 %% ---------------- plan ----------------------------------------------------
 pln = struct();
 pln.radiationMode = 'protons';  pln.machine = machineName;
@@ -98,7 +104,7 @@ if strcmp(engine, 'HongPB')
     pln.propDoseCalc.dosimetricLateralCutOff = 1;
 else
     pln.propDoseCalc.engine = 'MCsquare';
-    pln.propDoseCalc.numHistoriesDirect = nHistMC;
+    pln.propDoseCalc.numHistoriesDirect = nHistMC;   % MCsquare LET: stopping-power method (matRad default, RayStation-like)
 end
 pln.propOpt.runDAO = 0; pln.propSeq.runSequencing = 0;
 machine = matRad_loadMachine(pln);
@@ -142,3 +148,5 @@ for k = 1:numel(energies)
     writetable(T, outFile);
 end
 fprintf('\nSaved %s\n', outFile);
+end   % engines
+matRad_cfg.defaults = rmfield(matRad_cfg.defaults, 'doseWeightingThreshold');
