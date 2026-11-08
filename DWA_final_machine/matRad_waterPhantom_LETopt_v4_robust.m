@@ -90,8 +90,7 @@ set(0, 'DefaultFigureVisible', 'off');
 %% ---------------- settings --------------------------------------------
 machines   = {'DWA_proton_v3'};
 locations  = {'center'};                        % 'anterior','center','posterior','oblique'
-letWeights = struct('DWA_proton_v3', 0, ...      % 0 = dose-only reference (as Alaina's RayStation plan)
-                    'DWA_proton_v2', 0, 'IBA_cyclotron', 0, 'IBA_cyclotron_v2', 0, 'Generic', 0);
+letWeights = struct('DWA_proton_v3', 0);       % 0 = dose-only reference (as Alaina's RayStation plan)
 % ---- robust optimisation (v4)
 robust         = true;
 shiftSD_mm     = 3;          % setup uncertainty, each axis
@@ -110,7 +109,7 @@ mcOpt       = false;     % true: optimise on an MCsquare dij instead of HongPB (
 nHistBeamlet = 1e4;      % MCsquare histories per spot when mcOpt = true
 
 rangeShifterEqD_mm = struct('IBA_cyclotron', 60);   % water-equivalent thickness; [] or absent = none
-bixelWidth = struct('DWA_proton_v2', 3, 'DWA_proton_v3', 3, 'IBA_cyclotron', 5, 'IBA_cyclotron_v2', 5, 'Generic', 5);   % mm
+bixelWidth = struct('DWA_proton_v3', 3);      % lateral spot spacing, mm (4 mm halves the memory; check CTV homogeneity)
 longSpotSpacing_mm = 3;
 res_mm     = 3;
 targetDiam_mm = 50;
