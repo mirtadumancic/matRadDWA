@@ -39,11 +39,11 @@ matRad_cfg.disableGUI = true;
 %% ---------------- settings ------------------------------------------------
 machineName  = 'DWA_proton_v3';
 engines      = {'HongPB', 'MCsquare'};   % both on the PC; on the Mac use {'HongPB'} only
-energies     = [70.0 110.0 150.0 200.0];   % nearest machine layers are used
+energies     = [70.0 150.0 220.0];         % low / mid / high (ranges ~4, 16, 31 cm); nearest machine layers
 nHistMC      = 5e6;               % LET in low-dose regions needs more histories than dose
 offsets_mm   = [5 10 20];         % lateral sample positions
 detRadius_mm = 60;
-waterDepth_mm = 330; latHalf_mm = 40;      % 200 MeV range ~ 260 mm
+waterDepth_mm = 360; latHalf_mm = 40;      % 220 MeV range ~ 305 mm, plus the distal tail
 res_mm       = 1;  airGap_mm = 10;
 
 outDir = fullfile(rootDir, 'DWA_final_machine', 'LETd_vsDepth');
