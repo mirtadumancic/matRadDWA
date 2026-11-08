@@ -1,7 +1,7 @@
 """Bragg-peak (IDD) comparison: TOPAS ground truth vs matRad vs RayStation, pencil beam vs pencil beam
 and Monte Carlo vs Monte Carlo, for the DWA machine (single spot, water, r = 60 mm detector).
 
-usage: python3 compare_bragg_peaks.py TOPAS.csv RS_PB.csv RS_MC.csv [matRad_PB.csv|-] [matRad_MC.csv|-] OUTDIR
+usage: python3 compare_bragg_peaks.py TOPAS.csv RS_PB.csv RS_MC.csv [matRad_PB.csv|-] [matRad_MC.csv|-] OUTDIR [TAG]
 
 All curves are normalised to their own maximum (TOPAS input and RayStation exports are relative).
 Metrics per energy: depth of the maximum, distal R90, R80, R50, distal fall-off R20-R80 (mm),
@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from parse_bp import parse
 
 TOP, RSPB, RSMC, MRPB, MRMC, OUT = sys.argv[1:7]
+TAG = ('_' + sys.argv[7]) if len(sys.argv) > 7 else ''   # optional file-name suffix
 os.makedirs(OUT, exist_ok=True)
 plt.style.use(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'style.mplstyle'))
 RED, BLK, GREY = '#C62828', 'black', '#7A7A7A'
@@ -59,10 +60,11 @@ M = pd.DataFrame(rows)
 T0 = M[M.source == 'TOPAS'].set_index('energy')
 for c in ['peak', 'R90', 'R80', 'R50', 'falloff', 'entrance']:
     M['d_' + c] = M[c].values - T0.loc[M.energy, c].values
-M.to_csv(f'{OUT}/BraggPeak_metrics_all_energies.csv', index=False)
+M.to_csv(f'{OUT}/BraggPeak_metrics_all_energies{TAG}.csv', index=False)
 
 LAB = {'mR_PB': 'matRad pencil beam', 'RS_PB': 'RayStation pencil beam',
        'mR_MC': 'matRad MC (MCsquare)', 'RS_MC': 'RayStation MC'}
+if TAG: LAB['mR_PB'] += f' ({TAG[1:]})'
 STY = {'mR_PB': dict(color=RED, ls='-'), 'RS_PB': dict(color=BLK, ls='--'),
        'mR_MC': dict(color=RED, ls='-'), 'RS_MC': dict(color=BLK, ls='--')}
 
@@ -87,7 +89,7 @@ for r, (kind, pair) in enumerate([('Pencil beam', ['mR_PB', 'RS_PB']), ('Monte C
 axs[-1].set_xlabel('Depth in water (mm)'); axs[-1].set_xlim(0, 340)
 for a, s in zip(axs[[0, 2]], 'AB'):
     a.text(-0.09, 1.04, s, transform=a.transAxes, fontsize=10, fontweight='bold', va='bottom')
-for x in ('pdf', 'png'): fig.savefig(f'{OUT}/BraggPeaks_IDD_vs_TOPAS.{x}', dpi=300)
+for x in ('pdf', 'png'): fig.savefig(f'{OUT}/BraggPeaks_IDD_vs_TOPAS{TAG}.{x}', dpi=300)
 
 # ---------- figure 2: metric differences vs energy ----------
 MK = {'mR_PB': dict(color=RED, marker='o', mfc=RED, ls='-'), 'RS_PB': dict(color=BLK, marker='s', mfc=BLK, ls='--'),
@@ -106,11 +108,11 @@ for a in ax2[1]: a.set_xlabel('Energy (MeV)')
 ax2[0, 0].legend(loc='best', fontsize=6.5)
 for a, s in zip(ax2.flat, 'ABCD'):
     a.text(-0.2, 1.04, s, transform=a.transAxes, fontsize=10, fontweight='bold', va='bottom')
-for x in ('pdf', 'png'): fig2.savefig(f'{OUT}/BraggPeaks_metrics_vs_energy.{x}', dpi=300)
+for x in ('pdf', 'png'): fig2.savefig(f'{OUT}/BraggPeaks_metrics_vs_energy{TAG}.{x}', dpi=300)
 
 # ---------- summary table ----------
 S = (M[M.source != 'TOPAS'].groupby('source')
      .agg(n=('energy', 'size'), dR80_mean=('d_R80', 'mean'), dR80_maxabs=('d_R80', lambda x: np.max(np.abs(x))),
           dPeak_mean=('d_peak', 'mean'), dFalloff_mean=('d_falloff', 'mean'), dEntr_mean=('d_entrance', 'mean'),
           plateauMAD_mean=('plateauMAD', 'mean'), plateauMAD_max=('plateauMAD', 'max')).round(2))
-S.to_csv(f'{OUT}/BraggPeak_summary.csv'); print(S.to_string())
+S.to_csv(f'{OUT}/BraggPeak_summary{TAG}.csv'); print(S.to_string())

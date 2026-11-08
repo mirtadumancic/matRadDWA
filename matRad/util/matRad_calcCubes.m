@@ -83,7 +83,16 @@ for j = 1:length(doseFields)
 end
 
 if ~isfield(dij,'doseWeightingThreshold')
-    dij.doseWeightingThreshold = 0.01;
+    % Local change (Mirta Dumancic, 2026-11-08): the threshold can be set globally with
+    %   matRad_cfg = MatRad_Config.instance(); matRad_cfg.defaults.doseWeightingThreshold = 0;
+    % e.g. to report LETd in every voxel with dose, as RayStation does.
+    % Without that field the matRad default (1 % of the maximum dose) is unchanged.
+    matRad_cfg = MatRad_Config.instance();
+    if isstruct(matRad_cfg.defaults) && isfield(matRad_cfg.defaults, 'doseWeightingThreshold')
+        dij.doseWeightingThreshold = matRad_cfg.defaults.doseWeightingThreshold;
+    else
+        dij.doseWeightingThreshold = 0.01;
+    end
 end
 absoluteDoseWeightingThreshold = dij.doseWeightingThreshold*max(resultGUI.physicalDose(:));
 
