@@ -100,6 +100,10 @@ rangeAbsSD_mm  = 0;          % added to the relative range error (matRad default
                              % because matRad's scenario model needs a non-zero SD (singular covariance otherwise)
 wcCombinations = 'none';     % 'none' = 9 scenarios; 'all' = 81 (includes diagonal shifts)
 robustType     = 'COWC';     % composite worst case on the CTV objectives
+% memory (the dij is stored for every scenario):
+lateralCutOff  = 0.995;      % pencil-beam dosimetric lateral cut-off (matRad default 0.995); 0.99 if still out of memory
+% LET dij only when an LET objective is used; otherwise the nominal LETd is
+% recalculated after optimisation with one forward calculation (halves the memory)
 mcRecalcFor = [];        % LET weights whose final dose is recalculated with MCsquare, e.g. [0 10]
 nHistFinal  = 1e7;       % MCsquare histories for the recalculation
 mcOpt       = false;     % true: optimise on an MCsquare dij instead of HongPB (slow)
@@ -243,7 +247,8 @@ for m = 1:numel(machines)
             pln.propDoseCalc.engine       = 'HongPB';
             pln.propDoseCalc.lateralModel = 'double';
         end
-        pln.propDoseCalc.calcLET = 1;
+        pln.propDoseCalc.calcLET = double(~robust || any(wList > 0));
+        if strcmp(pln.propDoseCalc.engine, 'HongPB'), pln.propDoseCalc.dosimetricLateralCutOff = lateralCutOff; end
         pln.propDoseCalc.doseGrid.resolution = struct('x', res_mm, 'y', res_mm, 'z', res_mm);
         if newAPI, pln.propOpt.quantityOpt = 'RBExDose'; else, pln.propOpt.quantityOpt = 'RBExD'; end
         pln.propOpt.runDAO = 0;  pln.propSeq.runSequencing = 0;
@@ -279,6 +284,12 @@ for m = 1:numel(machines)
 
             % ---- pencil-beam (or MC-dij) result, scaled to D95 = 51.3 Gy
             [Dtot, LETc] = totalDose(resultGUI, nFx, ct.cubeDim);
+            if ~pln.propDoseCalc.calcLET              % nominal LETd from one forward calculation (same spots and weights)
+                plnF = pln; plnF.multScen = 'nomScen'; plnF.propDoseCalc.calcLET = 1;
+                resF = matRad_calcDoseForward(ct, cst, stf, plnF, w);
+                cd(rootDir);
+                [~, LETc] = totalDose(resF, nFx, ct.cubeDim);
+            end
             v = sort(Dtot(tMask));  sc = 0.95*Rx_total / v(max(1, ceil(0.05*numel(v))));
             Dtot = sc * Dtot;
             engineName = 'PB'; if mcOpt, engineName = 'MCopt'; end
