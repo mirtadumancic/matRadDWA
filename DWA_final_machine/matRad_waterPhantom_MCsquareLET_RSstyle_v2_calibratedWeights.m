@@ -1,4 +1,9 @@
-%% matRad_waterPhantom_MCsquareLET_RSstyle.m
+%% matRad_waterPhantom_MCsquareLET_RSstyle_v2_calibratedWeights.m
+%% VERSION v2 (calibrated weights), 8 Nov 2026.
+% As v1, but each spot weight is converted to a proton number with the
+% DWA_proton_v3 absolute calibration of its energy layer before MCsquare, so the
+% energy layers get their intended intensities. Same pencil-beam dose as the plan.
+% Outputs carry the tag _wCalibrated.
 % Recalculates a saved water-phantom plan with MCsquare and scores LETd the
 % way RayStation's Monte Carlo does, so that the matRad and RayStation
 % LET-volume histograms can be compared like with like.
@@ -29,7 +34,7 @@
 %   MC_DepositedEnergy  sensitivity to the LET scoring method
 %
 % Run on the Windows PC (MCsquare) from X:\matRadDWA_LET:
-%   matRad_rc; run('DWA_final_machine/matRad_waterPhantom_MCsquareLET_RSstyle.m')
+%   matRad_rc; run('DWA_final_machine/matRad_waterPhantom_MCsquareLET_RSstyle_v2_calibratedWeights.m')
 % Output: DWA_final_machine/WaterPhantom_MCLET_RSstyle/
 %   <plan>_MCLET.mat  (Dtot, LET per method, LET_PB, masks; single precision)
 %   <plan>_LVH.csv    (cumulative LVHs, CTV and Phantom - CTV, several dose cut-offs)
