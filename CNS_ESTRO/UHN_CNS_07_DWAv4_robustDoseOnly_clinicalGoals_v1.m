@@ -76,12 +76,26 @@ if ~exist(outDir, 'dir'), mkdir(outDir); end
 fprintf('[UHN_CNS_07] %s, beams gantry [%s] couch [%s]\n', mc, num2str(S.gantryAngles), num2str(S.couchAngles));
 
 %% 0b Beam geometry check (fast, before the hour-long dose calculation) -------------------
-[ctG, cstG] = cns_loadCase(caseCfg);
-cstG = cns_prepareStructures(ctG, cstG, caseCfg, study);
-set(0, 'DefaultFigureVisible', 'off');
-cns_figBeamGeometry(ctG, cstG, {caseCfg.beams}, fullfile(outDir, 'fig_beamGeometry_v1'));
-set(0, 'DefaultFigureVisible', 'on');
-clear ctG cstG
+% import the DICOM once if UHN_CNS_01 has not done it yet (same call as UHN_CNS_01)
+if strcmp(caseCfg.source.type, 'matFile') && ~exist(cns_expandPath(caseCfg.source.path), 'file')
+    dcmDir = cns_expandPath(cns_getfield(caseCfg, 'source.dicomDir', ''));
+    if isempty(dcmDir), error('No imported .mat and no source.dicomDir in the case file.'); end
+    fprintf('[UHN_CNS_07] importing DICOM from source.dicomDir (first run for this patient)\n');
+    cns_importDicom(dcmDir, cns_expandPath(caseCfg.source.path));
+end
+try
+    [ctG, cstG] = cns_loadCase(caseCfg);
+    cstG = cns_prepareStructures(ctG, cstG, caseCfg, study);
+    set(0, 'DefaultFigureVisible', 'off');
+    cns_figBeamGeometry(ctG, cstG, {struct('id', S.setLabel, 'gantryAngles', S.gantryAngles, ...
+        'couchAngles', S.couchAngles)}, fullfile(outDir, 'fig_beamGeometry_v1'));
+    set(0, 'DefaultFigureVisible', 'on');
+    clear ctG cstG
+catch err
+    set(0, 'DefaultFigureVisible', 'on');
+    if S.geometryOnly, rethrow(err); end
+    fprintf(2, '[UHN_CNS_07] beam-geometry figure failed (%s); continuing with the plan\n', err.message);
+end
 fprintf('[UHN_CNS_07] beam geometry: %s.png\n', fullfile(outDir, 'fig_beamGeometry_v1'));
 if S.geometryOnly
     fprintf('[UHN_CNS_07] S.geometryOnly = true: check the figure against the RayStation beams, then set it to false and run again.\n');
