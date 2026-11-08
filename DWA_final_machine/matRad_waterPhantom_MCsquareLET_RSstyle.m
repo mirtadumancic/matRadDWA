@@ -22,8 +22,11 @@
 %   - doseWeightingThreshold = 0: LETd in every voxel with dose > 0
 %     (matRad default is 1 % of the maximum dose; needs the small local change
 %     in matRad/util/matRad_calcCubes.m from 8 Nov 2026)
-% The pencil-beam LET from the plan file (machine table, 1 % threshold) is
-% kept for comparison.
+% Four LETd versions of the same plan are compared, to separate the two steps:
+%   PB_table_cut1pct    pencil beam, machine LET table, matRad default 1 % cut (as planned)
+%   PB_table_noCut      step 2 only: same, no dose cut-off
+%   MC_StopPow          steps 1 + 2: MCsquare, RayStation-like scoring, no cut-off
+%   MC_DepositedEnergy  sensitivity to the LET scoring method
 %
 % Run on the Windows PC (MCsquare) from X:\matRadDWA_LET:
 %   matRad_rc; run('DWA_final_machine/matRad_waterPhantom_MCsquareLET_RSstyle.m')
@@ -124,12 +127,24 @@ for m = 1:numel(letMethods)
     fprintf('  %-16s %.0f s: dose>0 in %.1f %% of grid, LET>0 in %.1f %%; Phantom-CTV: dose>0 %.1f %%, LET>0 %.1f %%\n', ...
         letMethods{m}, toc(t0), 100*mean(D(:) > 0), 100*mean(L(:) > 0), 100*mean(D(outside) > 0), 100*mean(L(outside) > 0));
 end
+% pencil beam (machine LET table) recalculated with the same zero threshold
+plnPB = pln;
+plnPB.propDoseCalc = struct('engine', 'HongPB', 'lateralModel', 'double', 'calcLET', 1, ...
+                            'doseGrid', pln.propDoseCalc.doseGrid);
+res = matRad_calcDoseForward(ct, cst, stf, plnPB, w);
+cd(rootDir);
+if isfield(res, 'RBExD'), D = res.RBExD; elseif isfield(res, 'RBExDose'), D = res.RBExDose; else, D = 1.1 * res.physicalDose; end
+D_PB0 = nFx * sc * D;
+LET_PB0 = res.LET; LET_PB0(~isfinite(LET_PB0) | D_PB0 <= 0) = 0;
+fprintf('  %-16s Phantom-CTV: dose>0 %.1f %%, LET>0 %.1f %%\n', 'HongPB, no cut', ...
+    100*mean(D_PB0(outside) > 0), 100*mean(LET_PB0(outside) > 0));
 matRad_cfg.defaults = rmfield(matRad_cfg.defaults, 'doseWeightingThreshold');   % back to matRad default
 
 %% ---------------- LVHs and summary ----------------------------------------
 regs = {'CTV', tMask; 'PhantomMinusCTV', outside};
 srcs = cell(0, 3);
-if ~isempty(LET_PB), srcs(end+1,:) = {'PB_table', LET_PB, D_PB}; end        % pencil beam, matRad default 1 % cut
+if ~isempty(LET_PB), srcs(end+1,:) = {'PB_table_cut1pct', LET_PB, D_PB}; end   % as planned: matRad default 1 % cut
+srcs(end+1,:) = {'PB_table_noCut', LET_PB0, D_PB0};                              % step 2 only
 for m = 1:numel(letMethods), srcs(end+1,:) = {['MC_' letMethods{m}], LETmc.(letMethods{m}), Dmc}; end %#ok<SAGROW>
 H = table(); Ssum = table();
 for s = 1:size(srcs, 1)
@@ -154,9 +169,9 @@ writetable(Ssum, fullfile(outDir, [planName '_summary.csv']));
 disp(Ssum(Ssum.doseCut_fracRx == 0 | Ssum.doseCut_fracRx == 0.01, :));
 
 Dtot = single(Dmc); LET_MC = structfun(@single, LETmc, 'UniformOutput', false);
-LET_PB = single(LET_PB); D_PB = single(D_PB);
+LET_PB = single(LET_PB); D_PB = single(D_PB); LET_PB0 = single(LET_PB0); D_PB0 = single(D_PB0); %#ok<NASGU>
 masks = struct('tMask', find(tMask), 'outside', find(outside)); %#ok<NASGU>
-save(fullfile(outDir, [planName '_MCLET.mat']), 'Dtot', 'LET_MC', 'LET_PB', 'D_PB', 'masks', 'tc', 'd', 'nHist', 'letMethods', '-v7.3');
+save(fullfile(outDir, [planName '_MCLET.mat']), 'Dtot', 'LET_MC', 'LET_PB', 'D_PB', 'LET_PB0', 'D_PB0', 'masks', 'tc', 'd', 'nHist', 'letMethods', '-v7.3');
 fprintf('\nSaved to %s\n', outDir);
 
 %% ---------------- helpers -------------------------------------------------
