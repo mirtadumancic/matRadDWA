@@ -16,6 +16,8 @@
 %  - Each scored curve is put on relative depth u = z / R80 (R80 from its own IDD).
 %    Plateau noise (u < 0.85) is smoothed with a 5-point moving mean; the Bragg-peak
 %    region is left as scored.
+%  - Distal to the peak the LETd is forced to be non-decreasing (cumulative maximum), which
+%    removes dips caused by the 1 mm bins at low energy (fix after the first build, 8 Nov).
 %  - Beyond the end of the dose (IDD < 1 % of its maximum distal to the peak) the
 %    LETd is held at its value at that point (MC LET there is noise from a handful of
 %    protons; the pencil beam weights LET with dose, so this only matters for LVHs
@@ -53,6 +55,7 @@ for k = 1:numel(Es)
     iEnd = ip - 1 + find(I(ip:end) < tailFrac * max(I), 1);          % end of dose
     if isempty(iEnd), iEnd = numel(z); end
     L(iEnd:end) = L(iEnd);                                             % hold beyond the dose
+    L(ip:end) = cummax(L(ip:end));   % distal to the peak LETd only rises (no dip from 1 mm binning / noise)
     pl = z / R80 < plateauU;
     Ls = movmean(L, smoothN, 'Endpoints', 'shrink');
     L(pl) = Ls(pl);
