@@ -30,6 +30,11 @@ S.setLabel  = 'RS_approved_3beam';
 S.runMC     = true;                       % MCsquare recalculation of the nominal plan
 S.nHistMC   = 2e7;
 S.forceDij  = false;                      % true: recompute the robust dij even if cached
+S.geometryOnly = true;                    % first run: only the beam-geometry figure, then stop.
+                                          % Check the beams against RayStation, then set false.
+% Beams of the approved RayStation plans (Mirta, Nov 8):
+%   CNS_01: gantry [270 100 75],  couch [0 0 300]
+%   CNS_02: gantry [270 290 60],  couch [0 55 270]   (air gap 3 cm for all beams)
 
 if isequal(S.gantryAngles, [0 0 0]), error('Set S.gantryAngles / S.couchAngles to the approved RayStation beams.'); end
 matRadRoot = getenv('MATRAD_ROOT');
@@ -61,6 +66,19 @@ cns_writeJson(studyFile, study);
 outDir = fullfile(caseDir, 'results_clinicalGoals_v1');
 if ~exist(outDir, 'dir'), mkdir(outDir); end
 fprintf('[UHN_CNS_07] %s, beams gantry [%s] couch [%s]\n', mc, num2str(S.gantryAngles), num2str(S.couchAngles));
+
+%% 0b Beam geometry check (fast, before the hour-long dose calculation) -------------------
+[ctG, cstG] = cns_loadCase(caseCfg);
+cstG = cns_prepareStructures(ctG, cstG, caseCfg, study);
+set(0, 'DefaultFigureVisible', 'off');
+cns_figBeamGeometry(ctG, cstG, {caseCfg.beams}, fullfile(outDir, 'fig_beamGeometry_v1'));
+set(0, 'DefaultFigureVisible', 'on');
+clear ctG cstG
+fprintf('[UHN_CNS_07] beam geometry: %s.png\n', fullfile(outDir, 'fig_beamGeometry_v1'));
+if S.geometryOnly
+    fprintf('[UHN_CNS_07] S.geometryOnly = true: check the figure against the RayStation beams, then set it to false and run again.\n');
+    return;
+end
 
 %% 1  Robust dose-only plan (+ photon plan evaluation) ------------------------------
 out = cns_runCase(caseFile, studyFile, struct('forceDij', S.forceDij));

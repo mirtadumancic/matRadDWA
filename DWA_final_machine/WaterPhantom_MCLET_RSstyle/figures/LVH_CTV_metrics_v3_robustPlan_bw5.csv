@@ -1,0 +1,6 @@
+source,mean,L98,L50,L2,mean_vsRS_pct,L98_vsRS_pct,L50_vsRS_pct,L2_vsRS_pct
+"matRad PB, table, 1 % cut",2.702,2.01,2.596,3.906,4.4,0.7,2.8,10.0
+"matRad PB, table, no cut",2.703,2.009,2.597,3.906,4.4,0.6,2.9,10.0
+"matRad MCsquare, StopPow, no cut",2.883,2.241,2.793,3.923,11.4,12.2,10.6,10.5
+"matRad MCsquare, DepositedEnergy, no cut",2.912,2.3,2.827,3.884,12.5,15.2,12.0,9.4
+RayStation MC,2.589,1.997,2.525,3.551,0.0,0.0,0.0,0.0
