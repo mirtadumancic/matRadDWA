@@ -32,6 +32,8 @@ S.couchAngles  = [0 0 0];                 %     (matRad convention: see CNS_plan
 S.setLabel  = 'RS_approved_3beam';
 S.runMC     = true;                       % MCsquare recalculation of the nominal plan
 S.nHistMC   = 2e7;
+S.mcScanner = 'matRad_hlutConsistent';    % MCsquare HU conversion: same as the pencil-beam HLUT (Nov 8);
+                                          % 'matRad_default' = MCsquare's old table (more stopping in bone)
 S.forceDij  = false;                      % true: recompute the robust dij even if cached
 S.smoke     = false;                      % true: quick end-to-end test (study spots, 80 iterations,
                                           % 1e5 MC protons) in a separate <alias>_DWAv4rob_SMOKE folder
@@ -174,9 +176,10 @@ if S.runMC
         'doseGrid', D.pln.propDoseCalc.doseGrid);
     stf = D.stf; for i = 1:numel(stf), stf(i).machine = mc; end
     matRad_cfg.defaults.doseWeightingThreshold = 0;          % LETd wherever dose > 0 (RayStation-like)
+    matRad_cfg.defaults.MCsquareScanner = S.mcScanner;
     t0 = tic;
     res = matRad_calcDoseForward(P.ct, P.cst, stf, plnMC, w);
-    matRad_cfg.defaults = rmfield(matRad_cfg.defaults, 'doseWeightingThreshold');
+    matRad_cfg.defaults = rmfield(matRad_cfg.defaults, {'doseWeightingThreshold', 'MCsquareScanner'});
     cd(matRadRoot);
     if isfield(res, 'RBExD'), Dm = res.RBExD; elseif isfield(res, 'RBExDose'), Dm = res.RBExDose; else, Dm = 1.1 * res.physicalDose; end
     Dm = Dm * nFx; Lm = res.LET; Lm(~isfinite(Lm) | Dm <= 0) = 0;
@@ -215,7 +218,7 @@ if ~isempty(letRows)
 end
 info = struct('alias', alias, 'machine', mc, 'gantryAngles', S.gantryAngles, 'couchAngles', S.couchAngles, ...
     'robustness', study.robustness, 'normalisation', study.normalisation, 'nScenarios', nS, ...
-    'bixelWidthMm', D.pln.propStf.bixelWidth, 'doseGridMm', r.x, 'nHistMC', S.nHistMC, 'finished', datestr(now, 31));
+    'bixelWidthMm', D.pln.propStf.bixelWidth, 'doseGridMm', r.x, 'nHistMC', S.nHistMC, 'mcScanner', S.mcScanner, 'finished', datestr(now, 31));
 cns_writeJson(fullfile(outDir, sprintf('run_info_%s_v1.json', alias)), info);
 disp(G);
 

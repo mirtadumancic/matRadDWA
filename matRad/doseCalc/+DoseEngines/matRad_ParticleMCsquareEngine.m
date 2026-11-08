@@ -204,8 +204,16 @@ classdef matRad_ParticleMCsquareEngine < DoseEngines.matRad_MonteCarloEngineAbst
             plnFile = fullfile(this.workingDir, 'currBixels.txt');
             ctFile = fullfile(this.workingDir, 'MC2patientCT.mhd');
             outputDir = fullfile(this.workingDir, 'output');
-            HU_Density_Conversion_File  = fullfile(this.MCsquareFolder, 'Scanners', 'matRad_default', 'HU_Density_Conversion.txt');    % Name of the file containing HU to density conversion data. Default: HU_Density_Conversion.txt
-            HU_Material_Conversion_File = fullfile(this.MCsquareFolder, 'Scanners', 'matRad_default', 'HU_Material_Conversion.txt');   % Name of the filecontaining HU to material conversion data. Default: HU_Material_Conversion.txt
+            % (local change, Nov 8 2026) scanner (HU -> density/material) selectable:
+            %   matRad_cfg = MatRad_Config.instance(); matRad_cfg.defaults.MCsquareScanner = 'matRad_hlutConsistent';
+            scannerName = 'matRad_default';
+            matRad_cfgS = MatRad_Config.instance();
+            if isstruct(matRad_cfgS.defaults) && isfield(matRad_cfgS.defaults, 'MCsquareScanner') && ~isempty(matRad_cfgS.defaults.MCsquareScanner)
+                scannerName = matRad_cfgS.defaults.MCsquareScanner;
+            end
+            matRad_cfgS.dispInfo('MCsquare scanner (HU conversion): %s\n', scannerName);
+            HU_Density_Conversion_File  = fullfile(this.MCsquareFolder, 'Scanners', scannerName, 'HU_Density_Conversion.txt');    % Name of the file containing HU to density conversion data. Default: HU_Density_Conversion.txt
+            HU_Material_Conversion_File = fullfile(this.MCsquareFolder, 'Scanners', scannerName, 'HU_Material_Conversion.txt');   % Name of the filecontaining HU to material conversion data. Default: HU_Material_Conversion.txt
 
             % Format paths to always have slashes
             if isequal(filesep, '\')
