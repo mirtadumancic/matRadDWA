@@ -36,6 +36,11 @@ S.geometryOnly = true;                    % first run: only the beam-geometry fi
 %   CNS_01: gantry [270 100 75],  couch [0 0 300]
 %   CNS_02: gantry [270 290 60],  couch [0 55 270]   (air gap 3 cm for all beams)
 
+% settings from a batch driver (run_UHN_CNS_07_overnight_v1.m) override the ones above
+if exist('S_override', 'var') && isstruct(S_override)
+    fo = fieldnames(S_override);
+    for k = 1:numel(fo), S.(fo{k}) = S_override.(fo{k}); end
+end
 if isequal(S.gantryAngles, [0 0 0]), error('Set S.gantryAngles / S.couchAngles to the approved RayStation beams.'); end
 matRadRoot = getenv('MATRAD_ROOT');
 if isempty(matRadRoot), matRadRoot = fileparts(fileparts(mfilename('fullpath'))); end
