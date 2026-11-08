@@ -43,7 +43,9 @@ pln.propDoseCalc.engine = cns_getfield(study, 'doseCalc.engine', 'HongPB');
 pln.propDoseCalc.lateralModel = cns_getfield(study, 'doseCalc.lateralModel', 'double');
 cut = cns_getfield(study, 'doseCalc.geometricLateralCutOffMm', []);
 if ~isempty(cut), pln.propDoseCalc.geometricLateralCutOff = cut; end
-pln.propDoseCalc.calcLET = 1;
+dcut = cns_getfield(study, 'doseCalc.dosimetricLateralCutOff', []);      % (Nov 8) e.g. 0.99 to save memory
+if ~isempty(dcut), pln.propDoseCalc.dosimetricLateralCutOff = dcut; end
+pln.propDoseCalc.calcLET = cns_getfield(study, 'doseCalc.calcLET', 1);    % (Nov 8) 0 = no LET dij
 r = cns_getfield(study, 'doseCalc.doseGridMm', 3);
 pln.propDoseCalc.doseGrid.resolution = struct('x', r, 'y', r, 'z', r);
 
@@ -61,6 +63,9 @@ pln.multScen = matRad_multScen(ct, rob.scenarios);
 if ~strcmp(rob.scenarios, 'nomScen')
     if isfield(rob, 'shiftSDmm'),     pln.multScen.shiftSD = rob.shiftSDmm(:)'; end
     if isfield(rob, 'rangeRelSDpct'), pln.multScen.rangeRelSD = rob.rangeRelSDpct; end
-    if isfield(rob, 'rangeAbsSDmm'),  pln.multScen.rangeAbsSD = rob.rangeAbsSDmm; end
+    if isfield(rob, 'rangeAbsSDmm'),  pln.multScen.rangeAbsSD = max(rob.rangeAbsSDmm, 1e-3); end   % matRad needs SD > 0
+    if isfield(rob, 'wcSigma'),       pln.multScen.wcSigma = rob.wcSigma; end
+    if isfield(rob, 'combinations'),  pln.multScen.combinations = rob.combinations; end
+    fprintf('[cns] robust scenarios: %d (%s)\n', pln.multScen.totNumScen, rob.scenarios);
 end
 end

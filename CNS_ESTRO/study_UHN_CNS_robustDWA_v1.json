@@ -1,0 +1,922 @@
+{
+  "_readme": "UHN CNS study, ROBUST DOSE-ONLY DWA plans to check whether matRad reproduces the approved RayStation proton plans (UHN_CNS_07). Machine DWA_proton_v4 (v3 dose tables, calibrated, fitAirOffset 400; MCsquare LET table). Robust optimisation as the water phantom v5: CTV objectives composite worst case (COWC) over 9 worst-case scenarios (setup +/-3 mm, range +/-3.5 %), OAR objectives nominal; no PTV objectives. Normalisation: nominal CTV D95 = 100 % Rx (RayStation-style). OAR objectives follow the UHN clinical goals (clinicalGoals). Doses are TOTAL Gy(RBE), RBE 1.1. Copy to _v2 before editing once results exist.",
+  "studyId": "UHN_CNS_robustDWA_v1",
+  "machines": [
+    "DWA_proton_v4"
+  ],
+  "referenceMachine": "DWA_proton_v4",
+  "stf": {
+    "bixelWidthMm": {
+      "DWA_proton_v2": 3,
+      "Generic": 5,
+      "IBA_cyclotron": 5,
+      "default": 5,
+      "DWA_proton_v4": 5
+    },
+    "longitudinalSpotSpacingMm": 3,
+    "rangeShifterEqDmm": {
+      "_note": "IBA lowest energy 99.6 MeV (R80 ~ 77 mm): shallow spots need a range shifter (fix in commit 3893cb39)",
+      "IBA_cyclotron": 60
+    },
+    "_note_v4": "5 mm spots: robust dij for 9 scenarios fits 16 GB (water phantom, Nov 8). 3-4 mm needs more RAM."
+  },
+  "doseCalc": {
+    "engine": "HongPB",
+    "lateralModel": "double",
+    "geometricLateralCutOffMm": 100,
+    "doseGridMm": 3,
+    "dosimetricLateralCutOff": 0.99,
+    "calcLET": 0,
+    "_note": "calcLET 0: no LET dij in the robust optimisation (memory); LETd comes from the MCsquare recalculation in UHN_CNS_07."
+  },
+  "robustness": {
+    "scenarios": "wcScen",
+    "shiftSDmm": [
+      3,
+      3,
+      3
+    ],
+    "rangeRelSDpct": 3.5,
+    "rangeAbsSDmm": 0,
+    "combinations": "none",
+    "wcSigma": 1,
+    "objective": "COWC",
+    "applyTo": "targets",
+    "_readme": "TO CONFIRM WITH ALAINA (RayStation robust settings). combinations none = 9 scenarios. rangeAbsSDmm 0 is set to 1e-3 (matRad needs SD > 0)."
+  },
+  "optimisation": {
+    "maxIter": 500,
+    "optimizer": "IPOPT"
+  },
+  "reusePlans": true,
+  "normalisation": {
+    "structure": "CTV",
+    "metric": "D95",
+    "mode": "fractionOfRx",
+    "fractionOfRx": 1.0,
+    "_readme": "Nominal CTV D95 = 100 % Rx, as the RayStation plans (clinical goal CTV V54 Gy >= 95 %). Worst-scenario values are reported by UHN_CNS_07."
+  },
+  "structures": {
+    "ptvMarginMm": 3
+  },
+  "objectives": {
+    "CTV": [
+      {
+        "type": "SquaredUnderdosing",
+        "penalty": 1000,
+        "doseFraction": 1.0
+      },
+      {
+        "type": "SquaredDeviation",
+        "penalty": 50,
+        "doseFraction": 1.02
+      },
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 100,
+        "doseFraction": 1.05
+      }
+    ],
+    "Brainstem": [
+      {
+        "type": "MaxDVH",
+        "penalty": 300,
+        "doseGy": 52.0,
+        "volumePct": 50
+      },
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 300,
+        "doseGy": 55.5
+      }
+    ],
+    "Chiasm": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 300,
+        "doseGy": 53.5
+      }
+    ],
+    "OpticNerve_L": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 300,
+        "doseGy": 53.5
+      }
+    ],
+    "OpticNerve_R": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 300,
+        "doseGy": 53.5
+      }
+    ],
+    "Eye_L": [
+      {
+        "type": "MeanDose",
+        "penalty": 50,
+        "doseGy": 0
+      },
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 100,
+        "doseGy": 10
+      }
+    ],
+    "Eye_R": [
+      {
+        "type": "MeanDose",
+        "penalty": 50,
+        "doseGy": 0
+      },
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 100,
+        "doseGy": 10
+      }
+    ],
+    "Lens_L": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 200,
+        "doseGy": 1.5
+      }
+    ],
+    "Lens_R": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 200,
+        "doseGy": 1.5
+      }
+    ],
+    "Cochlea_L": [
+      {
+        "type": "MeanDose",
+        "penalty": 30,
+        "doseGy": 0
+      },
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 30,
+        "doseGy": 40
+      }
+    ],
+    "Cochlea_R": [
+      {
+        "type": "MeanDose",
+        "penalty": 30,
+        "doseGy": 0
+      },
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 30,
+        "doseGy": 40
+      }
+    ],
+    "Hippocampus_L": [
+      {
+        "type": "MeanDose",
+        "penalty": 30,
+        "doseGy": 0
+      }
+    ],
+    "Hippocampus_R": [
+      {
+        "type": "MeanDose",
+        "penalty": 30,
+        "doseGy": 0
+      }
+    ],
+    "Pituitary": [
+      {
+        "type": "MeanDose",
+        "penalty": 20,
+        "doseGy": 0
+      }
+    ],
+    "Parotid_L": [
+      {
+        "type": "MeanDose",
+        "penalty": 10,
+        "doseGy": 0
+      }
+    ],
+    "Parotid_R": [
+      {
+        "type": "MeanDose",
+        "penalty": 10,
+        "doseGy": 0
+      }
+    ],
+    "BrainMinusPTV": [
+      {
+        "type": "MeanDose",
+        "penalty": 20,
+        "doseGy": 0
+      }
+    ],
+    "Ring_5_10": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 100,
+        "doseFraction": 0.85
+      }
+    ],
+    "Ring_10_20": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 100,
+        "doseFraction": 0.6
+      }
+    ],
+    "Body": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 100,
+        "doseFraction": 1.05
+      }
+    ],
+    "GTV": [
+      {
+        "type": "SquaredUnderdosing",
+        "penalty": 300,
+        "doseFraction": 1.0
+      }
+    ],
+    "SpinalCord": [
+      {
+        "type": "SquaredOverdosing",
+        "penalty": 300,
+        "doseGy": 50
+      }
+    ]
+  },
+  "letStructures": [
+    "OpticNerve_L",
+    "OpticNerve_R",
+    "Chiasm",
+    "Brainstem",
+    "BrainRing_0_15"
+  ],
+  "plans": [
+    {
+      "id": "robustDoseOnly",
+      "let": {
+        "mode": "none"
+      }
+    }
+  ],
+  "evaluation": {
+    "_readme": "LETd counted where RBE 1.1 dose >= letdMinDoseGy (10 % of Rx: the stopgap LET tables are unreliable below that, CLAUDE.md gotcha 10). D x LETd: Heinzelmann 2026, 6 mm Gaussian (sigma, check sigma vs FWHM), voxels >= 5 Gy(RBE).",
+    "alphaBetaTarget": 10,
+    "alphaBetaNormal": 2,
+    "letdMinDoseGy": 5.4,
+    "dirtyDoseThresholdKeVum": 2,
+    "dvhBinGy": 0.25,
+    "lvhBinKeVum": 0.1,
+    "dLetd": {
+      "sigmaMm": 6,
+      "minDoseGy": 5
+    },
+    "targets": [
+      "CTV",
+      "PTV",
+      "GTV"
+    ],
+    "oars": [
+      "Brainstem",
+      "Chiasm",
+      "OpticNerve_L",
+      "OpticNerve_R",
+      "Eye_L",
+      "Eye_R",
+      "Lens_L",
+      "Lens_R",
+      "Cochlea_L",
+      "Cochlea_R",
+      "Hippocampus_L",
+      "Hippocampus_R",
+      "Pituitary",
+      "Parotid_L",
+      "Parotid_R",
+      "SpinalCord",
+      "Brain",
+      "Brain_healthy",
+      "BrainMinusPTV",
+      "BrainRing_0_15",
+      "Ring_0_5",
+      "Ring_5_10",
+      "Ring_10_20"
+    ],
+    "hotSpots": [
+      {
+        "structure": "Brainstem",
+        "doseGy": 50,
+        "letd": 2.8,
+        "quantity": "RBE11"
+      },
+      {
+        "structure": "Brain_healthy",
+        "doseGy": 43,
+        "letd": 4.6,
+        "quantity": "RBE11"
+      },
+      {
+        "structure": "*",
+        "doseGy": 20,
+        "letd": 4,
+        "quantity": "RBE11"
+      },
+      {
+        "structure": "*",
+        "doseGy": 30,
+        "letd": 2.5,
+        "quantity": "RBE11"
+      }
+    ]
+  },
+  "constraintsCheck": {
+    "_readme": "Reported pass/fail for every plan. Values are common literature limits for 54 Gy in 1.8 Gy fractions (QUANTEC, Mayo 2010 for optic apparatus, Mayo 2010 brainstem, Bhandare 2010 cochlea); lens and hippocampus are common practice, not QUANTEC. REPLACE WITH THE UHN CNS PROTOCOL before reporting.",
+    "list": [
+      {
+        "structure": "Brainstem",
+        "quantity": "RBE11",
+        "metric": "D0_03cc",
+        "max": 54
+      },
+      {
+        "structure": "Chiasm",
+        "quantity": "RBE11",
+        "metric": "D0_03cc",
+        "max": 54
+      },
+      {
+        "structure": "OpticNerve_L",
+        "quantity": "RBE11",
+        "metric": "D0_03cc",
+        "max": 54
+      },
+      {
+        "structure": "OpticNerve_R",
+        "quantity": "RBE11",
+        "metric": "D0_03cc",
+        "max": 54
+      },
+      {
+        "structure": "Cochlea_L",
+        "quantity": "RBE11",
+        "metric": "Dmean",
+        "max": 45
+      },
+      {
+        "structure": "Cochlea_R",
+        "quantity": "RBE11",
+        "metric": "Dmean",
+        "max": 45
+      },
+      {
+        "structure": "Lens_L",
+        "quantity": "RBE11",
+        "metric": "D0_03cc",
+        "max": 7
+      },
+      {
+        "structure": "Lens_R",
+        "quantity": "RBE11",
+        "metric": "D0_03cc",
+        "max": 7
+      },
+      {
+        "structure": "SpinalCord",
+        "quantity": "RBE11",
+        "metric": "D0_03cc",
+        "max": 45
+      }
+    ]
+  },
+  "beamCandidates": {
+    "_readme": "matRad convention (LPS, checked in matRad_getRotationMatrix and stf.sourcePoint): gantry 0 = beam from anterior, 90 = from the patient's LEFT (right side of the axial image), couch 270 + gantry 90 = vertex (from superior). Clock = axial image, anterior at 12, patient left at 3.",
+    "sets": [
+      {
+        "id": "A_2and4oclock",
+        "label": "2 + 4 o'clock (LAO 60 + LPO 120), coplanar, both from the left",
+        "gantryAngles": [
+          60,
+          120
+        ],
+        "couchAngles": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "B_2oclock_vertex",
+        "label": "2 o'clock + vertex (non-coplanar)",
+        "gantryAngles": [
+          60,
+          90
+        ],
+        "couchAngles": [
+          0,
+          270
+        ]
+      },
+      {
+        "id": "C_3oclock_vertex",
+        "label": "left lateral + vertex (non-coplanar)",
+        "gantryAngles": [
+          90,
+          90
+        ],
+        "couchAngles": [
+          0,
+          270
+        ]
+      },
+      {
+        "id": "D_2and10oclock",
+        "label": "2 + 10 o'clock (crosses the right orbit; for contrast)",
+        "gantryAngles": [
+          60,
+          300
+        ],
+        "couchAngles": [
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "beamScreen": {
+    "_readme": "Quick screen of beamCandidates: Generic, coarse grid, dose-only. Ranks nothing by itself: read the table and the geometry figure, then set beams in the case file.",
+    "machine": "Generic",
+    "doseGridMm": 4,
+    "bixelWidthMm": 6,
+    "longitudinalSpotSpacingMm": 4,
+    "maxIter": 200
+  },
+  "letSearch": {
+    "_readme": "Gradient descent on u = log10(w) for the LET x dose penalty w (SquaredOverdosing on matRad's 'LETd' quantity, which is LET x dose). Outer objective J(w) = mean_s[ DxLETd_D2_s(w) / DxLETd_D2_s(dose-only) ] + lambda * P_cov(w), s = burdenStructures with a nonzero dose-only value. P_cov = sum of squared coverage violations in % (CTV D98 below minFractionOfRx*Rx; D98 more than maxD98DropPct below dose-only; D2 more than maxD2RisePct above dose-only). Central finite-difference gradient (step h decades), steepest-descent step eta*g capped at maxStepDecades, Armijo backtracking, move to a better finite-difference neighbour if there is one, bounds on w. Every LET plan starts from the dose-only spot weights, so J(w) is a deterministic function of w. Reference of the LET objective: refFactor x the 5th percentile of LET x dose (total, physical) in the CTV of the dose-only plan (Unkelbach 2016 style; CLAUDE.md 4.3). matRad divides it by numOfFractions like any dose level.",
+    "w0": 0.1,
+    "wMin": 0.001,
+    "wMax": 3,
+    "h": 0.15,
+    "eta": 10.0,
+    "maxStepDecades": 0.5,
+    "tolStepDecades": 0.05,
+    "armijoC": 0.0001,
+    "maxBacktracks": 3,
+    "maxEvals": 14,
+    "lambda": 1.0,
+    "refMode": "targetP5",
+    "refFactor": 1.0,
+    "letStructures": [
+      "OpticNerve_L",
+      "OpticNerve_R",
+      "Chiasm",
+      "Brainstem",
+      "BrainRing_0_15"
+    ],
+    "burdenStructures": [
+      "OpticNerve_L",
+      "OpticNerve_R",
+      "Chiasm",
+      "Brainstem"
+    ],
+    "burdenQuantity": "DxLETd",
+    "burdenMetric": "D2",
+    "coverage": {
+      "structure": "CTV",
+      "minFractionOfRx": 0.95,
+      "maxD98DropPct": 1.0,
+      "maxD2RisePct": 2.0
+    },
+    "displacement": [
+      "BrainMinusPTV",
+      "Brain_healthy",
+      "Ring_10_20"
+    ]
+  },
+  "summary": {
+    "referencePlan": "doseOnly",
+    "clinicalLabel": "photon",
+    "keyMetrics": [
+      {
+        "structure": "CTV",
+        "quantity": "RBE11",
+        "metric": "D98"
+      },
+      {
+        "structure": "CTV",
+        "quantity": "RBE11",
+        "metric": "D95"
+      },
+      {
+        "structure": "CTV",
+        "quantity": "RBE11",
+        "metric": "D2"
+      },
+      {
+        "structure": "CTV",
+        "quantity": "McN",
+        "metric": "D98"
+      },
+      {
+        "structure": "PTV",
+        "quantity": "RBE11",
+        "metric": "D95"
+      },
+      {
+        "structure": "PTV",
+        "quantity": "RBE11",
+        "metric": "V95pct"
+      },
+      {
+        "structure": "OpticNerve_L",
+        "quantity": "RBE11",
+        "metric": "D0_03cc"
+      },
+      {
+        "structure": "OpticNerve_L",
+        "quantity": "McN",
+        "metric": "D0_03cc"
+      },
+      {
+        "structure": "OpticNerve_L",
+        "quantity": "DxLETd",
+        "metric": "D2"
+      },
+      {
+        "structure": "OpticNerve_R",
+        "quantity": "RBE11",
+        "metric": "D0_03cc"
+      },
+      {
+        "structure": "Chiasm",
+        "quantity": "RBE11",
+        "metric": "D0_03cc"
+      },
+      {
+        "structure": "Chiasm",
+        "quantity": "McN",
+        "metric": "D0_03cc"
+      },
+      {
+        "structure": "Chiasm",
+        "quantity": "DxLETd",
+        "metric": "D2"
+      },
+      {
+        "structure": "Brainstem",
+        "quantity": "RBE11",
+        "metric": "D0_03cc"
+      },
+      {
+        "structure": "Brainstem",
+        "quantity": "DxLETd",
+        "metric": "D2"
+      },
+      {
+        "structure": "Brainstem",
+        "quantity": "hotSpot",
+        "metric": "V_D50_L2.8_cc"
+      },
+      {
+        "structure": "Eye_L",
+        "quantity": "RBE11",
+        "metric": "Dmean"
+      },
+      {
+        "structure": "Eye_R",
+        "quantity": "RBE11",
+        "metric": "Dmean"
+      },
+      {
+        "structure": "Lens_L",
+        "quantity": "RBE11",
+        "metric": "D0_03cc"
+      },
+      {
+        "structure": "Cochlea_L",
+        "quantity": "RBE11",
+        "metric": "Dmean"
+      },
+      {
+        "structure": "Cochlea_R",
+        "quantity": "RBE11",
+        "metric": "Dmean"
+      },
+      {
+        "structure": "Hippocampus_L",
+        "quantity": "RBE11",
+        "metric": "Dmean"
+      },
+      {
+        "structure": "Hippocampus_R",
+        "quantity": "RBE11",
+        "metric": "Dmean"
+      },
+      {
+        "structure": "Pituitary",
+        "quantity": "RBE11",
+        "metric": "Dmean"
+      },
+      {
+        "structure": "BrainMinusPTV",
+        "quantity": "RBE11",
+        "metric": "Dmean"
+      },
+      {
+        "structure": "BrainMinusPTV",
+        "quantity": "RBE11",
+        "metric": "V20Gy_cc"
+      },
+      {
+        "structure": "Brain_healthy",
+        "quantity": "McN",
+        "metric": "Dmean"
+      },
+      {
+        "structure": "Brain_healthy",
+        "quantity": "hotSpot",
+        "metric": "V_D43_L4.6_cc"
+      },
+      {
+        "structure": "BrainRing_0_15",
+        "quantity": "hotSpot",
+        "metric": "V_D20_L4_cc"
+      }
+    ]
+  },
+  "figures": {
+    "dvhStructures": [
+      "CTV",
+      "PTV",
+      "OpticNerve_L",
+      "Chiasm",
+      "Brainstem",
+      "Eye_L",
+      "Eye_R",
+      "Cochlea_L",
+      "Hippocampus_L",
+      "BrainMinusPTV"
+    ],
+    "lvhStructures": [
+      "OpticNerve_L",
+      "Chiasm",
+      "Brainstem",
+      "BrainRing_0_15"
+    ],
+    "oars": [
+      "OpticNerve_L",
+      "Chiasm",
+      "Brainstem",
+      "BrainRing_0_15"
+    ],
+    "hotSpotBars": [
+      {
+        "structure": "Brainstem",
+        "metric": "V_D50_L2.8_cc"
+      },
+      {
+        "structure": "Brain_healthy",
+        "metric": "V_D43_L4.6_cc"
+      },
+      {
+        "structure": "BrainRing_0_15",
+        "metric": "V_D20_L4_cc"
+      }
+    ],
+    "slicesForPatient": false
+  },
+  "clinicalGoals": {
+    "_readme": "UHN RayStation clinical goals (Mirta, Nov 8 2026). Doses total Gy(RBE), RBE 1.1. Types: Vgy = volume (%) receiving >= param Gy; Vgycc = same in cc; Dpct = dose to param % of the volume; Dcc = dose to param cc; mean = mean dose.",
+    "list": [
+      {
+        "structure": "GTV",
+        "type": "Vgy",
+        "param": 54,
+        "comparator": ">=",
+        "limit": 100,
+        "unit": "%",
+        "label": "GTVp V54Gy >= 100 %"
+      },
+      {
+        "structure": "CTV",
+        "type": "Vgy",
+        "param": 54,
+        "comparator": ">=",
+        "limit": 95,
+        "unit": "%",
+        "label": "CTVp_5400 V54Gy >= 95 %"
+      },
+      {
+        "structure": "CTV",
+        "type": "Vgy",
+        "param": 51.3,
+        "comparator": ">=",
+        "limit": 100,
+        "unit": "%",
+        "label": "CTVp_5400 V51.3Gy >= 100 %"
+      },
+      {
+        "structure": "CTV",
+        "type": "Vgy",
+        "param": 54,
+        "comparator": ">=",
+        "limit": 100,
+        "unit": "%",
+        "label": "CTVp_5400 V54Gy >= 100 %"
+      },
+      {
+        "structure": "Brainstem",
+        "type": "Dpct",
+        "param": 50,
+        "comparator": "<=",
+        "limit": 52.4,
+        "unit": "Gy",
+        "label": "Brainstem D50% <= 52.4 Gy"
+      },
+      {
+        "structure": "Brainstem",
+        "type": "Dpct",
+        "param": 10,
+        "comparator": "<=",
+        "limit": 54,
+        "unit": "Gy",
+        "label": "Brainstem D10% <= 54 Gy"
+      },
+      {
+        "structure": "Brainstem",
+        "type": "Dpct",
+        "param": 50,
+        "comparator": "<=",
+        "limit": 54,
+        "unit": "Gy",
+        "label": "Brainstem D50% <= 54 Gy"
+      },
+      {
+        "structure": "Brainstem",
+        "type": "Dcc",
+        "param": 0.1,
+        "comparator": "<=",
+        "limit": 56,
+        "unit": "Gy",
+        "label": "Brainstem D0.1cc <= 56 Gy"
+      },
+      {
+        "structure": "Chiasm",
+        "type": "Dcc",
+        "param": 0.1,
+        "comparator": "<=",
+        "limit": 54,
+        "unit": "Gy",
+        "label": "Chiasm D0.1cc <= 54 Gy"
+      },
+      {
+        "structure": "OpticNerve_L",
+        "type": "Dcc",
+        "param": 0.1,
+        "comparator": "<=",
+        "limit": 54,
+        "unit": "Gy",
+        "label": "OpticNrv_L D0.1cc <= 54 Gy"
+      },
+      {
+        "structure": "OpticNerve_R",
+        "type": "Dcc",
+        "param": 0.1,
+        "comparator": "<=",
+        "limit": 54,
+        "unit": "Gy",
+        "label": "OpticNrv_R D0.1cc <= 54 Gy"
+      },
+      {
+        "structure": "SpinalCord",
+        "type": "Vgycc",
+        "param": 50,
+        "comparator": "<=",
+        "limit": 5,
+        "unit": "cc",
+        "label": "SpinalCord V50Gy <= 5 cc"
+      },
+      {
+        "structure": "SpinalCord",
+        "type": "Dcc",
+        "param": 1,
+        "comparator": "<=",
+        "limit": 52.2,
+        "unit": "Gy",
+        "label": "SpinalCord D1cc <= 52.2 Gy"
+      },
+      {
+        "structure": "SpinalCord",
+        "type": "Dcc",
+        "param": 0.1,
+        "comparator": "<=",
+        "limit": 54,
+        "unit": "Gy",
+        "label": "SpinalCord D0.1cc <= 54 Gy"
+      },
+      {
+        "structure": "Cochlea_L",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 30,
+        "unit": "Gy",
+        "label": "Cochlea_L mean <= 30 Gy"
+      },
+      {
+        "structure": "Cochlea_R",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 30,
+        "unit": "Gy",
+        "label": "Cochlea_R mean <= 30 Gy"
+      },
+      {
+        "structure": "Pituitary",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 30,
+        "unit": "Gy",
+        "label": "Pituitary mean <= 30 Gy"
+      },
+      {
+        "structure": "Parotid_L",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 20,
+        "unit": "Gy",
+        "label": "Parotid_L mean <= 20 Gy"
+      },
+      {
+        "structure": "Parotid_R",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 20,
+        "unit": "Gy",
+        "label": "Parotid_R mean <= 20 Gy"
+      },
+      {
+        "structure": "Hippocampus_L",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 5,
+        "unit": "Gy",
+        "label": "Hippocampus_L mean <= 5 Gy"
+      },
+      {
+        "structure": "Hippocampus_R",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 5,
+        "unit": "Gy",
+        "label": "Hippocampus_R mean <= 5 Gy"
+      },
+      {
+        "structure": "Eye_L",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 2,
+        "unit": "Gy",
+        "label": "Eye_L mean <= 2 Gy"
+      },
+      {
+        "structure": "Eye_R",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 2,
+        "unit": "Gy",
+        "label": "Eye_R mean <= 2 Gy"
+      },
+      {
+        "structure": "Lens_L",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 2,
+        "unit": "Gy",
+        "label": "Lens_L mean <= 2 Gy"
+      },
+      {
+        "structure": "Lens_R",
+        "type": "mean",
+        "param": null,
+        "comparator": "<=",
+        "limit": 2,
+        "unit": "Gy",
+        "label": "Lens_R mean <= 2 Gy"
+      }
+    ]
+  }
+}

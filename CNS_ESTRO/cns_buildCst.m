@@ -25,6 +25,7 @@ for i = 1:numel(fn), objs.(fn{i}) = caseObjs.(fn{i}); end
 
 rob = cns_getfield(study, 'robustness.objective', 'none');
 if pln.multScen.totNumScen < 2, rob = 'none'; end
+robTargetsOnly = strcmp(cns_getfield(study, 'robustness.applyTo', 'all'), 'targets');   % (Nov 8)
 tScale = cns_getfield(planDef, 'targetPenaltyScale', 1);
 
 names = fieldnames(objs);
@@ -35,7 +36,7 @@ for i = 1:numel(names)
         continue;
     end
     list = cns_toCell(objs.(names{i}));
-    isTarget = any(strcmp(names{i}, {'PTV', 'CTV'}));
+    isTarget = any(strcmp(names{i}, {'PTV', 'CTV', 'GTV'}));
     for k = 1:numel(list)
         o = list{k};
         d = cns_getfield(o, 'doseGy', []);
@@ -43,7 +44,7 @@ for i = 1:numel(names)
         p = o.penalty;
         if isTarget, p = p * tScale; end
         obj = makeObjective(o.type, p, d, cns_getfield(o, 'volumePct', []));
-        if ~strcmp(rob, 'none'), obj.robustness = rob; end
+        if ~strcmp(rob, 'none') && (isTarget || ~robTargetsOnly), obj.robustness = rob; end
         cst{ix,6}{end+1} = obj;
     end
 end
