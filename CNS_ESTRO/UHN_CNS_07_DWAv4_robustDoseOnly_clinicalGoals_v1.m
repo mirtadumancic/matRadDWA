@@ -66,6 +66,15 @@ rx  = caseCfg0.prescription.totalDoseGyRBE;
 nFx = caseCfg0.prescription.numOfFractions;
 goals = study.clinicalGoals.list;
 smokeTag = '';
+% (Nov 9) per-patient overrides from the driver (e.g. CNS_02: 5 mm spots, fewer iterations)
+if isfield(S, 'bixelWidthMm') && ~isempty(S.bixelWidthMm)
+    study.stf.bixelWidthMm.(mc) = S.bixelWidthMm;
+    fprintf('[UHN_CNS_07] spot spacing for this patient: %g mm\n', S.bixelWidthMm);
+end
+if isfield(S, 'maxIter') && ~isempty(S.maxIter)
+    study.optimisation.maxIter = S.maxIter;
+    fprintf('[UHN_CNS_07] max. optimiser iterations for this patient: %d\n', S.maxIter);
+end
 if S.smoke                                   % quick test: same pipeline, coarse settings, own folder
     % spot spacing as in the real run: the DWA spot is narrow (sigma in air ~1.2-1.8 mm),
     % coarser spacing gives striped dose and hot spots (smoke test with 10 mm, Nov 8)

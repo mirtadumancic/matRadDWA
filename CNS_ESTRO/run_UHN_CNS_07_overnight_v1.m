@@ -27,26 +27,26 @@ summary = {};
 for iPat = 1:numel(patients)
     pat = patients(iPat);
     fprintf('\n\n================ %s  (%s) ================\n', pat.label, datestr(now));
-    t0 = tic;
+    tPat = tic;   % (not t0: UHN_CNS_07 reuses t0)
     S_override = struct('caseFile', pat.caseFile, 'gantryAngles', pat.gantryAngles, ...
         'couchAngles', pat.couchAngles, 'setLabel', ['RS_approved_' pat.label], ...
         'geometryOnly', false, 'runMC', runMC);
     try
         run(script);
-        msg = sprintf('%s: OK in %.0f min. PB nominal %d/%d, PB worst %d/%d goals met', pat.label, toc(t0)/60, ...
+        msg = sprintf('%s: OK in %.0f min. PB nominal %d/%d, PB worst %d/%d goals met', pat.label, toc(tPat)/60, ...
             sum(Tn.pass, 'omitnan'), nnz(~isnan(Tn.pass)), sum(Tw.pass, 'omitnan'), nnz(~isnan(Tw.pass)));
         if exist('Tm', 'var') && ~isempty(Tm)
             msg = sprintf('%s, MCsquare %d/%d', msg, sum(Tm.pass, 'omitnan'), nnz(~isnan(Tm.pass)));
         end
         msg = sprintf('%s. Table: %s', msg, outDir);
     catch err
-        msg = sprintf('%s: FAILED after %.0f min: %s (line %d of %s)', pat.label, toc(t0)/60, err.message, ...
+        msg = sprintf('%s: FAILED after %.0f min: %s (line %d of %s)', pat.label, toc(tPat)/60, err.message, ...
             err.stack(1).line, err.stack(1).name);
     end
     fprintf('\n>>> %s\n', msg);
     summary{end+1} = msg; %#ok<SAGROW>
     fid = fopen(sumFile, 'w'); fprintf(fid, '%s\n', summary{:}); fclose(fid);
-    clearvars -except patients runMC stamp logFile sumFile here script summary iPat dataRoot
+    clearvars -except tPat patients runMC stamp logFile sumFile here script summary iPat dataRoot
     close all force
 end
 fprintf('\nAll done %s\n', datestr(now));
