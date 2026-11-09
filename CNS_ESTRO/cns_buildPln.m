@@ -48,7 +48,9 @@ if ~isempty(dcut), pln.propDoseCalc.dosimetricLateralCutOff = dcut; end
 pln.propDoseCalc.calcLET = cns_getfield(study, 'doseCalc.calcLET', 1);    % (Nov 8) 0 = no LET dij
 tod = cns_getfield(study, 'doseCalc.traceOnDoseGrid', false);           % (Nov 8) ray tracing on the dose grid:
 pln.propDoseCalc.traceOnDoseGrid = logical(tod);
-pln.propDoseCalc.precision = cns_getfield(study, 'doseCalc.precision', 'double');   % (Nov 8) 'single': sparse single dij (MATLAB >= R2025a), ~25 % less memory                         % patient CTs (sub-mm) run out of memory otherwise
+pln.propDoseCalc.precision = cns_getfield(study, 'doseCalc.precision', 'double');
+ign = cns_getfield(study, 'doseCalc.ignoreOutsideDensities', []);       % (Nov 8) false: PB sees the mask/head rest
+if ~isempty(ign), pln.propDoseCalc.ignoreOutsideDensities = logical(ign); end   % outside the contours, as MCsquare   % (Nov 8) 'single': sparse single dij (MATLAB >= R2025a), ~25 % less memory                         % patient CTs (sub-mm) run out of memory otherwise
 r = cns_getfield(study, 'doseCalc.doseGridMm', 3);
 pln.propDoseCalc.doseGrid.resolution = struct('x', r, 'y', r, 'z', r);
 

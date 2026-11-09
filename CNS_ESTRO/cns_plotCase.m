@@ -43,7 +43,11 @@ annotation('textbox', [0 0.95 1 0.05], 'String', sprintf('%s: RBE 1.1%s%s', alia
 saveFig(f, fullfile(figDir, 'dvh_targets'));
 
 % ---- 2) OAR DVH and 3) OAR LVH
-for kind = {'dvh', 'lvh'}
+% (Nov 8) no pencil-beam LET when the dij has no LET (doseCalc.calcLET = 0, e.g. the robust
+% DWA study: LETd comes from the MCsquare recalculation): skip the empty LVH and hot-spot figures
+hasLET = logical(cns_getfield(study, 'doseCalc.calcLET', 1));
+kinds = {'dvh', 'lvh'}; if ~hasLET, kinds = {'dvh'}; end
+for kind = kinds
     f = figure('Position', [50 50 380 * numel(machines) 300 * numel(oars)]);
     for r = 1:numel(oars)
         for m = 1:numel(machines)
@@ -67,7 +71,7 @@ end
 
 % ---- 4) dose-LET hot spots
 hs = cns_toCell(cns_getfield(F, 'hotSpotBars', {}));
-if ~isempty(hs)
+if ~isempty(hs) && hasLET
     f = figure('Position', [50 50 360 * numel(hs) 360]);
     for k = 1:numel(hs)
         subplot(1, numel(hs), k);

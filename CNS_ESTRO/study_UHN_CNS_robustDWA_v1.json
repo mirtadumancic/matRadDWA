@@ -33,6 +33,8 @@
     "calcLET": 0,
     "traceOnDoseGrid": true,
     "precision": "single",
+    "ignoreOutsideDensities": false,
+    "_note_ignoreOutside": "PB includes material outside the contours (immobilisation mask, head rest, couch), as MCsquare does. UHN_CNS_08 (CNS_01, Nov 8): with matRad default (ignore) MC/PB = 0.94 in the CTV; including it MC/PB = 1.000; air outside the Body in both 0.994; water patient 0.993. TO CONFIRM: whether RayStation included the fixation/support ROIs.",
     "_note_precision": "single-precision sparse dij (MATLAB R2026a on the UHN PC): ~25 % less memory for the robust 9-scenario dij (Nov 8).",
     "_note_trace": "Radiological depth traced on the 3 mm dose grid. Tracing on the sub-mm patient CT ran out of memory in matRad_RayTracerSiddon (16 GB, Nov 8).",
     "_note": "calcLET 0: no LET dij in the robust optimisation (memory); LETd comes from the MCsquare recalculation in UHN_CNS_07."
