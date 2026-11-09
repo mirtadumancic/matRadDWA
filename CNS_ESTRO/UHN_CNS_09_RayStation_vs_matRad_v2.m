@@ -46,6 +46,13 @@ S.lowDosePct = 10;          % gamma evaluated where either dose > 10 % of the Ra
 S.exactEnergies = true;     % machine entries at the exact RayStation energies
 S.fitMU    = true;          % fit protons-per-MU vs energy per beam (needs the per-beam RTDOSE files)
 S.nBins    = 8;             % energy bins per beam for the fit
+S.outsideBodyAir = false;   % true: everything outside the Body contour is air in ALL matRad calculations
+                            % (RayStation ignores material outside the External ROI unless it is a
+                            % support/fixation ROI; Alaina, Nov 9: mask and couch are not ROIs)
+S.outTag   = '';            % appended to the output folder name, e.g. '_airOutside'
+S.calcLVH  = false;         % true: MCsquare also scores LETd (no dose threshold) and LETd-volume histograms are written
+S.reuseFit = false;         % true: take the MU calibration from results_RayStation_v2/MUfit_perEnergyBin_*.csv (skips the 24 pencil-beam runs)
+S.skipUnfitMC = false;      % true: skip the MCsquare run with MU used as particle numbers
 if exist('S_override', 'var') && isstruct(S_override)
     fo = fieldnames(S_override); for k = 1:numel(fo), S.(fo{k}) = S_override.(fo{k}); end
 end
@@ -62,7 +69,7 @@ study = cns_readJson(fullfile(matRadRoot, 'CNS_ESTRO', 'study_UHN_CNS_robustDWA_
 alias = caseCfg0.alias; rx = caseCfg0.prescription.totalDoseGyRBE; nFx = caseCfg0.prescription.numOfFractions;
 goals = study.clinicalGoals.list;
 caseDir = fullfile(cns_expandPath(caseCfg0.workDir), [alias '_DWAv4rob']);
-outDir = fullfile(caseDir, 'results_RayStation_v2'); if ~exist(outDir, 'dir'), mkdir(outDir); end
+outDir = fullfile(caseDir, ['results_RayStation_v2' S.outTag]); if ~exist(outDir, 'dir'), mkdir(outDir); end
 logTxt = fullfile(outDir, 'rs_dicom_summary_v2.txt');
 fid = fopen(logTxt, 'w'); if fid < 0, error('Cannot write %s', logTxt); end
 say = @(varargin) sayBoth(fid, varargin{:});        % print to the screen and to the summary txt
@@ -105,6 +112,14 @@ say('Frame of reference RTDOSE vs planning CT: %s\n', ifelse(strcmp(forRD, forCT
 %% 2  RayStation plan dose on the CT grid ------------------------------------------------
 P = load(fullfile(caseDir, 'prepared.mat'), 'ct', 'cst', 'refDose');
 ct = P.ct; cst = P.cst; [cx, cy, cz] = ctAxes(ct);
+if S.outsideBodyAir
+    bodyCT = false(ct.cubeDim); bodyCT(idx(cst, 'Body')) = true;
+    nOut = nnz(~bodyCT & ct.cubeHU{1} > -900);
+    ct.cubeHU{1}(~bodyCT) = -1000;                     % matRad rebuilds the stopping-power cube from cubeHU
+    say('Outside the Body contour set to air: %.0f cc of material (HU > -900) removed\n', ...
+        nOut * ct.resolution.x * ct.resolution.y * ct.resolution.z / 1000);
+    clear bodyCT
+end
 rc = ct.resolution; voxCcCT = rc.x * rc.y * rc.z / 1000;
 isPlan = cellfun(@(r) strcmpi(r.info.DoseSummationType, 'PLAN'), rd);
 isEff  = cellfun(@(r) strncmpi(r.info.DoseType, 'EFFECTIVE', 6), rd);
@@ -149,10 +164,10 @@ bodyD = false(gridD.doseGrid.dimensions); bodyD(idx(cstD, 'Body')) = true;
 ctvD = false(gridD.doseGrid.dimensions); ctvD(idx(cstD, 'CTV')) = true;
 res = [gridD.doseGrid.resolution.x gridD.doseGrid.resolution.y gridD.doseGrid.resolution.z];
 dx = @(x, p) prctile(double(x), 100 - p);
-Dmc = []; Dmc_d = [];
+Dmc = []; Dmc_d = []; Lmc = []; Lrs = [];
 if S.runMC
     for i = 1:numel(stfRob), stfRob(i).machine = S.machine; end
-    Dmc = mcDose(ct, cst, stfRob, plnBase, w, S, nFx, matRadRoot);
+    [Dmc, Lmc] = mcDose(ct, cst, stfRob, plnBase, w, S, nFx, matRadRoot, S.calcLVH);
     Dmc_d = toDG(Dmc);
 end
 
@@ -183,8 +198,18 @@ if ~isempty(rp)
     plnRS.propStf.gantryAngles = [stfRS.gantryAngle]; plnRS.propStf.couchAngles = [stfRS.couchAngle];
     plnRS.propStf.isoCenter = vertcat(stfRS.isoCenter); plnRS.propStf.numOfBeams = numel(stfRS);
     plnRS.propDoseCalc.calcLET = 0; plnRS.propDoseCalc.precision = 'double';
-    kOfSpot = ones(size(wRS));
-    if S.fitMU
+    kOfSpot = ones(size(wRS)); reused = false;
+    fitCsv = fullfile(caseDir, 'results_RayStation_v2', sprintf('MUfit_perEnergyBin_%s_v2.csv', alias));
+    if S.fitMU && S.reuseFit && exist(fitCsv, 'file')
+        Kt = readtable(fitCsv); c0 = cumsum([0 stfRS.totalNumOfBixels]);
+        for b = 1:numel(stfRS)
+            es = cell2mat(arrayfun(@(q) q.energy(:), stfRS(b).ray(:), 'UniformOutput', false));
+            kb = Kt(Kt.beam == info.beamNumber(b), :);
+            kOfSpot(c0(b) + 1:c0(b + 1)) = kInterp(kb.Emean_MeV, kb.k_fit, es);
+        end
+        reused = true; say('MU calibration reused from %s\n', fitCsv);
+    end
+    if S.fitMU && ~reused
         % ---- per beam: pencil-beam dose of each energy bin (dose grid), then fit to the RayStation beam dose
         dimsD = gridD.doseGrid.dimensions; nVox = prod(dimsD);
         gxD = gridD.doseGrid.x(:)'; gyD = gridD.doseGrid.y(:)'; gzD = gridD.doseGrid.z(:)';
@@ -245,7 +270,7 @@ if ~isempty(rp)
         writetable(Kt, fullfile(outDir, sprintf('MUfit_perEnergyBin_%s_v2.csv', alias)));
         writetable(Bt, fullfile(outDir, sprintf('MUfit_perBeam_%s_v2.csv', alias)));
         disp(Kt); disp(Bt);
-    else
+    elseif ~S.fitMU
         r = matRad_calcDoseForward(ct, cst, stfRS, plnRS, wRS); cd(matRadRoot);
         Drsm_pb = single(1.1 * double(r.physicalDose));
         fPB = median(Drs(ctvIx)) / median(Drsm_pb(ctvIx)); Drsm_pb = fPB * Drsm_pb;
@@ -253,11 +278,13 @@ if ~isempty(rp)
     say('TEST 1 pencil beam, MU used as particle numbers: one scale factor (median CTV) = %.4g\n', fPB);
     if S.runMC
         S1 = S; S1.nHistMC = S.nHistMC_RSplan;
-        Drsm_mc = mcDose(ct, cst, stfRS, plnRS, wRS, S1, 1, matRadRoot);
-        fMC = median(Drs(ctvIx)) / median(Drsm_mc(ctvIx)); Drsm_mc = fMC * Drsm_mc;
-        say('TEST 1 MCsquare, MU used as particle numbers: scale factor = %.4g (PB/MC factor ratio %.4f)\n', fMC, fPB / fMC);
+        if ~S.skipUnfitMC
+            Drsm_mc = mcDose(ct, cst, stfRS, plnRS, wRS, S1, 1, matRadRoot, false);
+            fMC = median(Drs(ctvIx)) / median(Drsm_mc(ctvIx)); Drsm_mc = fMC * Drsm_mc;
+            say('TEST 1 MCsquare, MU used as particle numbers: scale factor = %.4g (PB/MC factor ratio %.4f)\n', fMC, fPB / fMC);
+        end
         if S.fitMU
-            Drsm_mcfit = mcDose(ct, cst, stfRS, plnRS, wRS .* kOfSpot, S1, 1, matRadRoot);
+            [Drsm_mcfit, Lrs] = mcDose(ct, cst, stfRS, plnRS, wRS .* kOfSpot, S1, 1, matRadRoot, S.calcLVH);
             fMCfit = median(Drs(ctvIx)) / median(Drsm_mcfit(ctvIx)); Drsm_mcfit = fMCfit * Drsm_mcfit;
             say('TEST 1 MCsquare with the fitted MU calibration: residual scale factor (median CTV) = %.4f\n', fMCfit);
         end
@@ -319,6 +346,30 @@ Mt = cell2table(rows, 'VariableNames', {'dose', 'what', 'D98_or_value', 'D95', '
     'gamma33_body_pct', 'gamma33_CTV_pct', 'gamma22_body_pct', 'gamma22_CTV_pct'});
 writetable(Mt, fullfile(outDir, sprintf('comparison_metrics_%s_v2.csv', alias))); disp(Mt);
 
+%% 6b  LETd-volume histograms (MCsquare, every voxel counts, no dose threshold; CT grid) ---------
+if S.calcLVH
+    gL = (0:0.1:25)'; rowsL = {}; mL = {};
+    sL = {'CTV', 'PTV', 'GTV', 'Brainstem', 'Chiasm', 'OpticNerve_L', 'OpticNerve_R', 'Pituitary', ...
+          'Hippocampus_L', 'Hippocampus_R', 'Cochlea_L', 'Cochlea_R', 'BrainMinusPTV', 'Brain'};
+    sL = sL(cellfun(@(n) ~isempty(idx(cst, n)), sL));
+    setsL = {'matRad robust plan MCsquare', Lmc, Dmc; 'RayStation plan in matRad MCsquare', Lrs, Drsm_mcfit};
+    for q = 1:size(setsL, 1)
+        if isempty(setsL{q, 2}), continue; end
+        for i = 1:numel(sL)
+            v = idx(cst, sL{i}); l = double(setsL{q, 2}(v)); d = double(setsL{q, 3}(v));
+            vol = 100 * arrayfun(@(x) mean(l >= x), gL);
+            rowsL = [rowsL; [repmat({setsL{q, 1}, sL{i}}, numel(gL), 1), num2cell(gL), num2cell(vol)]]; %#ok<AGROW>
+            mL(end+1, :) = {setsL{q, 1}, sL{i}, mean(l), sum(l .* d) / max(sum(d), eps), prctile(l, 50), prctile(l, 98), mean(d)}; %#ok<SAGROW>
+        end
+    end
+    if ~isempty(rowsL)
+        writetable(cell2table(rowsL, 'VariableNames', {'plan', 'structure', 'LETd_keVum', 'volume_pct'}), ...
+            fullfile(outDir, sprintf('LVH_MCsquare_%s_v2.csv', alias)));
+        Lt = cell2table(mL, 'VariableNames', {'plan', 'structure', 'LETd_mean', 'LETd_doseWeighted', 'LETd_median', 'LETd_p98', 'meanDose_GyRBE'});
+        writetable(Lt, fullfile(outDir, sprintf('LETd_metrics_MCsquare_%s_v2.csv', alias))); disp(Lt);
+    end
+end
+
 %% 7  DVH figure (CT grid) ----------------------------------------------------------------
 try
     tR = P.refDose.toTotal; if isnan(tR), tR = nFx; end
@@ -363,7 +414,7 @@ try
 catch err
     set(0, 'DefaultFigureVisible', 'on'); fprintf(2, 'DVH figure failed: %s\n', err.message);
 end
-save(fullfile(outDir, sprintf('rs_doses_%s_v2_PATIENT_DATA_keep_on_PC.mat', alias)), 'Drs', 'Dpb', 'Dmc', 'Dmatch', 'Drsm_pb', 'Drsm_mc', 'Drsm_fit', 'Drsm_mcfit', 'fPB', 'fMC', 'fMCfit', 'fMatch', '-v7.3');
+save(fullfile(outDir, sprintf('rs_doses_%s_v2_PATIENT_DATA_keep_on_PC.mat', alias)), 'Lmc', 'Lrs', 'Drs', 'Dpb', 'Dmc', 'Dmatch', 'Drsm_pb', 'Drsm_mc', 'Drsm_fit', 'Drsm_mcfit', 'fPB', 'fMC', 'fMCfit', 'fMatch', '-v7.3');
 say('Done. Results in %s\n', outDir);
 fclose(fid);
 
@@ -402,15 +453,28 @@ function f = machineFile(root, m)
 f = fullfile(root, 'matRad', 'basedata', ['protons_' m '.mat']);
 if ~exist(f, 'file'), f = fullfile(root, 'userdata', 'machines', ['protons_' m '.mat']); end
 end
-function D = mcDose(ct, cst, stf, pln, w, S, nFx, root)
+function [D, L] = mcDose(ct, cst, stf, pln, w, S, nFx, root, wantLET)
+% MCsquare forward dose (Gy(RBE), x nFx) and, if wantLET, LETd in every voxel with dose
+if nargin < 9, wantLET = false; end
 matRad_cfg = MatRad_Config.instance();
 plnMC = pln; plnMC.multScen = 'nomScen';
-plnMC.propDoseCalc = struct('engine', 'MCsquare', 'calcLET', 0, 'numHistoriesDirect', S.nHistMC, ...
+plnMC.propDoseCalc = struct('engine', 'MCsquare', 'calcLET', double(wantLET), 'numHistoriesDirect', S.nHistMC, ...
     'doseGrid', pln.propDoseCalc.doseGrid);
 matRad_cfg.defaults.MCsquareScanner = S.mcScanner;
-r = matRad_calcDoseForward(ct, cst, stf, plnMC, w);
-matRad_cfg.defaults = rmfield(matRad_cfg.defaults, 'MCsquareScanner'); cd(root);
-D = single(1.1 * nFx * double(r.physicalDose));
+if wantLET, matRad_cfg.defaults.doseWeightingThreshold = 0; end
+try
+    r = matRad_calcDoseForward(ct, cst, stf, plnMC, w);
+catch err
+    matRad_cfg.defaults = rmfield(matRad_cfg.defaults, intersect(fieldnames(matRad_cfg.defaults), {'MCsquareScanner', 'doseWeightingThreshold'}));
+    cd(root); rethrow(err);
+end
+matRad_cfg.defaults = rmfield(matRad_cfg.defaults, intersect(fieldnames(matRad_cfg.defaults), {'MCsquareScanner', 'doseWeightingThreshold'}));
+cd(root);
+D = single(1.1 * nFx * double(r.physicalDose)); L = [];
+if wantLET
+    if isfield(r, 'LET'), L = single(r.LET); L(~isfinite(L) | D <= 0) = 0;
+    else, warning('MCsquare returned no LET cube.'); end
+end
 end
 function T = addGoals(T, G, name)
 T.(name) = G.value; T.([name '_pass']) = G.pass;
