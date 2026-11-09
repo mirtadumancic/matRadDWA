@@ -24,7 +24,8 @@ S.caseFile = 'C:/Users/t146774uhn/Documents/UHN_Test_Patient_Data/Patient1/CNS_0
 S.rsDir    = '';            % <-- folder with Alaina's RayStation RTPLAN (RP*) and RTDOSE (RD*) files
 S.machine  = 'DWA_proton_v4';
 S.runMC    = true;          % MCsquare for the RayStation plan (TEST 1) and the matRad plan (TEST 2)
-S.nHistMC  = 2e7;
+S.nHistMC  = 2e7;           % matRad robust plan (TEST 2)
+S.nHistMC_RSplan = 5e7;     % RayStation plan in matRad (TEST 1): ~1e5 spots, needs more protons
 S.mcScanner = 'matRad_hlutConsistent';
 S.gamma    = {[3 3], [2 2]};  % [% mm], global
 S.lowDosePct = 10;          % gamma evaluated where either dose > 10 % of the RayStation max
@@ -152,7 +153,8 @@ if ~isempty(rp)
     fPB = median(Drs(ctvIx)) / median(Drsm_pb(ctvIx)); Drsm_pb = fPB * Drsm_pb;
     say('TEST 1 pencil beam: scale factor matRad -> RayStation (median CTV) = %.4g\n', fPB);
     if S.runMC
-        Drsm_mc = mcDose(ct, cst, stfRS, plnRS, wRS, S, 1, matRadRoot);
+        S1 = S; S1.nHistMC = S.nHistMC_RSplan;
+        Drsm_mc = mcDose(ct, cst, stfRS, plnRS, wRS, S1, 1, matRadRoot);
         fMC = median(Drs(ctvIx)) / median(Drsm_mc(ctvIx)); Drsm_mc = fMC * Drsm_mc;
         say('TEST 1 MCsquare: scale factor = %.4g (MC/PB factor ratio %.4f)\n', fMC, fPB / fMC);
     end
