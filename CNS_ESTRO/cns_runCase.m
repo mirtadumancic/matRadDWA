@@ -259,6 +259,24 @@ S = struct();
 for i = 1:2:numel(varargin), S.(varargin{i}) = varargin{i+1}; end
 if isOctave
     save('-v7', f, '-struct', 'S');
+    return;
+end
+% (Nov 9) MATLAB aborts (hard crash in HDF5 H5Fclose) when a -v7.3 save fails, e.g. on a
+% full disk (CNS_01 robust dij, Nov 8). Check the free space first and stop with a normal,
+% catchable error instead. Large files are written without compression (less memory).
+info = whos('S'); need = 1.2 * info.bytes + 1e9;
+d = fileparts(f); if isempty(d), d = pwd; end
+try
+    free = double(java.io.File(d).getUsableSpace());
+catch
+    free = Inf;                                      % no Java: skip the check
+end
+if free < need
+    error('cns:diskFull', ['Not enough disk space to save %s: %.1f GB free, ~%.1f GB needed. ' ...
+        'Delete old dij_*.mat files (CNS_ESTRO_runs) and run again.'], f, free / 1e9, need / 1e9);
+end
+if info.bytes > 1e9
+    save(f, '-struct', 'S', '-v7.3', '-nocompression');
 else
     save(f, '-struct', 'S', '-v7.3');
 end
