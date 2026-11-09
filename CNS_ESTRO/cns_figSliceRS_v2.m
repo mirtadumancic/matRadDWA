@@ -14,6 +14,8 @@ function cns_figSliceRS_v2(ct, cst, panels, opt, base)
 %   row, col  position in the grid
 %   doseForMask  (type 'let' / 'diff') total dose cube used to hide low-dose voxels
 % opt (all optional)
+%   singleColourBar    true: one colour bar per panel type in the whole figure (default false: per row)
+%   labelFirstRowOnly  true: structure labels only in the first row (default false)
 %   plane        'sagittal' (default) | 'axial' | 'coronal'
 %   slice        index along the plane normal; default = centroid of opt.centreOn
 %   centreOn     structure for the default slice (default 'CTV')
@@ -169,7 +171,7 @@ for p = 1:numel(panels)
         mU = up(smooth2(mS, 0.7), dr, dc, px, 'linear');
         [xc, yc] = drawLevel(ax, xq, yq, mU, 0.5, C.color, 1.1);
         lab = cns_getfield(C, 'label', '');
-        if ~isempty(lab) && P.col == 1 && ~isempty(xc)
+        if ~isempty(lab) && P.col == 1 && ~isempty(xc) && (P.row == 1 || ~g('labelFirstRowOnly', false))
             [~, iy] = min(yc); xa = xc(iy); ya = yc(iy);          % arrow to the top of the outline
             off = cns_getfield(C, 'labelOffsetMm', [15 -15]);
             xt = xa + off(1); yt = ya + off(2);
@@ -204,6 +206,7 @@ for r = 1:nRow
     for e = 1:numel(E), if ~any(strcmp(types, E(e).type)), types{end+1} = E(e).type; end, end %#ok<AGROW>
     y = (H - r * rowH + bH + 0.25) / H; h = (panH - 0.50) / H;
     for t = 1:numel(types)
+        if g('singleColourBar', false) && any(strcmp({bars.type}, types{t})), continue; end   % one bar per type in the whole figure
         bars(end+1) = struct('row', r, 'pos', [1 - cbW + (0.30 + 1.7 * (t - 1)) / W, y, 0.30 / W, h], ...
             'type', types{t}, 'nInRow', numel(types)); %#ok<AGROW>
     end

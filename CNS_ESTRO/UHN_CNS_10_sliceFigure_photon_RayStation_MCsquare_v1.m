@@ -1,10 +1,10 @@
 %% UHN_CNS_10_sliceFigure_photon_RayStation_MCsquare_v1.m
 % Three-panel slice figure for one patient, dose in % of the prescription:
-%   Photon (delivered) | DWA, RayStation MC | DWA, MCsquare recalculated
+%   Photon (delivered) | DWA, RayStation MC | DWA, MCsquare recalculated   (S.layout: one below another, or in a row)
 % Nothing is recalculated: the doses are read from the files written by UHN_CNS_09 v2
 % (rs_doses_<alias>_v2_PATIENT_DATA_keep_on_PC.mat) and from prepared.mat. Takes about a minute.
 %   clear all; run('CNS_ESTRO/run_UHN_CNS_10_CNS02_v1.m')
-% Output: <case>_DWAv4rob/<S.doseFolder>/fig_slices_<plane>_<alias>_v2.(pdf|png) and _slices.mat
+% Output: <case>_DWAv4rob/<S.doseFolder>/fig_slices_<plane>_<alias>_<layout>_v2.(pdf|png) and _slices.mat
 % PATIENT IMAGES: the output stays on hospital storage; check consent / congress rules before use.
 S = struct();
 S.caseFile   = 'C:/Users/t146774uhn/Documents/UHN_Test_Patient_Data/Patient2/CNS_02.json';
@@ -14,7 +14,8 @@ S.slice      = [];                            % [] = slice through the centre of
 S.crop       = {'Body'};                      % whole patient outline on the slice; {'Brain','Eye_L','Eye_R'} = brain only
 S.cropMarginMm = 8;
 S.background = 'dark';                        % 'dark' (planning-system look) | 'light'
-S.widthCm    = 17.5;
+S.layout     = 'column';                      % 'column' = panels one below another | 'row' = side by side
+S.widthCm    = [];                            % [] = 9 cm for 'column', 17.5 cm for 'row'
 if exist('S_override', 'var') && isstruct(S_override)
     fo = fieldnames(S_override); for k = 1:numel(fo), S.(fo{k}) = S_override.(fo{k}); end
 end
@@ -34,6 +35,8 @@ if ~isequal(size(R.Drs), P.ct.cubeDim) || ~isequal(size(R.Drsm_mcfit), P.ct.cube
     error('The dose cubes are not on the CT grid of prepared.mat.');
 end
 
+isCol = strcmp(S.layout, 'column');
+if isempty(S.widthCm), if isCol, S.widthCm = 9; else, S.widthCm = 17.5; end, end
 pan = struct('cube', {}, 'type', {}, 'title', {}, 'row', {}, 'col', {}, 'doseForMask', {});
 if ~isempty(P.refDose)
     t = P.refDose.toTotal; if isnan(t), t = nFx; end
@@ -44,6 +47,7 @@ end
 pan(end+1) = struct('cube', single(R.Drs), 'type', 'dose', 'title', 'DWA, RayStation MC', 'row', 1, 'col', numel(pan) + 1, 'doseForMask', []);
 pan(end+1) = struct('cube', single(R.Drsm_mcfit), 'type', 'dose', 'title', 'DWA, MCsquare recalculated', 'row', 1, 'col', numel(pan) + 1, 'doseForMask', []);
 
+if isCol, for ip = 1:numel(pan), pan(ip).row = pan(ip).col; pan(ip).col = 1; end, end
 contours = struct( ...
     'name',  {'GTV', 'CTV', 'PTV', 'OpticNerve_L', 'OpticNerve_R', 'Chiasm', 'Brainstem', 'Eye_L', 'Eye_R', 'Body'}, ...
     'color', {[0.15 0.55 0.15], [0.85 0.10 0.85], [0.30 0.60 1.00], [1.00 0.85 0.10], [1.00 0.85 0.10], ...
@@ -53,9 +57,10 @@ contours = struct( ...
 vis0 = get(0, 'DefaultFigureVisible'); set(0, 'DefaultFigureVisible', 'off');
 for ip = 1:numel(S.planes)
     oS = struct('plane', S.planes{ip}, 'centreOn', 'CTV', 'rxGy', rx, 'washMinPct', 50, 'isoPct', [50 95 107], ...
-        'contours', contours, 'crop', {S.crop}, 'cropMarginMm', S.cropMarginMm, 'background', S.background, 'widthCm', S.widthCm);
+        'contours', contours, 'crop', {S.crop}, 'cropMarginMm', S.cropMarginMm, 'background', S.background, 'widthCm', S.widthCm, ...
+        'singleColourBar', true, 'labelFirstRowOnly', true);
     if ~isempty(S.slice), oS.slice = S.slice; end
-    base = fullfile(outDir, sprintf('fig_slices_%s_%s_v2', S.planes{ip}, alias));
+    base = fullfile(outDir, sprintf('fig_slices_%s_%s_%s_v2', S.planes{ip}, alias, S.layout));
     try
         cns_figSliceRS_v2(P.ct, P.cst, pan, oS, base);
         fprintf('[UHN_CNS_10] %s.png\n', base);
