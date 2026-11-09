@@ -12,7 +12,7 @@ dataRoot = 'C:/Users/t146774uhn/Documents/UHN_Test_Patient_Data';
 pat = struct('caseFile', fullfile(dataRoot, 'Patient1', 'CNS_01.json'), ...
     'gantryAngles', [270 100 75], 'couchAngles', [0 0 300], 'label', 'CNS_01');   % Patient 1
 
-smokeNominal = true;    % true: nominal plan only (no robust scenarios) = plan-quality check, low memory
+smokeNominal = false;   % true: nominal plan only (no robust scenarios) = plan-quality check, low memory
                         % false: full robust 9-scenario pipeline
 here = fileparts(mfilename('fullpath'));
 diary(fullfile(dataRoot, sprintf('UHN_CNS_07_smoke_log_%s.txt', datestr(now, 'yyyy-mm-dd_HHMM')))); diary on

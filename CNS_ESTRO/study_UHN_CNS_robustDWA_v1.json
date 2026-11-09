@@ -13,14 +13,15 @@
       "Generic": 5,
       "IBA_cyclotron": 5,
       "default": 5,
-      "DWA_proton_v4": 3
+      "DWA_proton_v4": 4
     },
     "longitudinalSpotSpacingMm": 3,
     "rangeShifterEqDmm": {
       "_note": "IBA lowest energy 99.6 MeV (R80 ~ 77 mm): shallow spots need a range shifter (fix in commit 3893cb39)",
       "IBA_cyclotron": 60
     },
-    "_note_v4_3mm": "DWA_proton_v4 lateral spot spacing 3 mm (Nov 8): the DWA spot sigma in air is 1.2-1.8 mm (100-230 MeV); 5-10 mm spacing gave striped entrance channels and target hot spots of 3-5 x Rx in CNS_01. TO CONFIRM: Alaina's RayStation spot spacing.",
+    "_note_v4_4mm": "4 mm (Nov 8): the 3 mm robust dij for CNS_01 (4.8 GB on disk) crashed MATLAB on the 16 GB PC; 4 mm + single precision should fit CNS_01 (and hopefully CNS_02). Entrance ripple for sigma 1.5 mm ~ +-12 %, negligible at depth.",
+  "_note_v4_3mm": "DWA_proton_v4 lateral spot spacing 3 mm (Nov 8): the DWA spot sigma in air is 1.2-1.8 mm (100-230 MeV); 5-10 mm spacing gave striped entrance channels and target hot spots of 3-5 x Rx in CNS_01. TO CONFIRM: Alaina's RayStation spot spacing.",
   "_note_v4": "(old) 5 mm spots: robust dij for 9 scenarios fits 16 GB (water phantom, Nov 8). 3-4 mm needs more RAM."
   },
   "doseCalc": {
@@ -31,6 +32,8 @@
     "dosimetricLateralCutOff": 0.99,
     "calcLET": 0,
     "traceOnDoseGrid": true,
+    "precision": "single",
+    "_note_precision": "single-precision sparse dij (MATLAB R2026a on the UHN PC): ~25 % less memory for the robust 9-scenario dij (Nov 8).",
     "_note_trace": "Radiological depth traced on the 3 mm dose grid. Tracing on the sub-mm patient CT ran out of memory in matRad_RayTracerSiddon (16 GB, Nov 8).",
     "_note": "calcLET 0: no LET dij in the robust optimisation (memory); LETd comes from the MCsquare recalculation in UHN_CNS_07."
   },

@@ -74,7 +74,7 @@ for m = 1:numel(machines)
     % matRad; spots on the PTV + robust margin double the spot count and run out of memory
     spotTargets = cns_toCell(cns_getfield(study, 'stf.spotTargets', {}));
     bwKey = cns_getfield(study, ['stf.bixelWidthMm.' machine], cns_getfield(study, 'stf.bixelWidthMm.default', 5));
-    spotKey = sprintf('%s|bw%gmm', strjoin(sort(spotTargets), ','), bwKey);   % cache key: targets + spacing
+    spotKey = sprintf('%s|bw%gmm|%s', strjoin(sort(spotTargets), ','), bwKey, cns_getfield(study, 'doseCalc.precision', 'double'));   % cache key
     useCache = exist(dijFile, 'file') && ~forceDij;
     if useCache
         Sk = whos('-file', dijFile);
