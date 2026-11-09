@@ -46,8 +46,9 @@ alias = caseCfg0.alias; rx = caseCfg0.prescription.totalDoseGyRBE; nFx = caseCfg
 goals = study.clinicalGoals.list;
 caseDir = fullfile(cns_expandPath(caseCfg0.workDir), [alias '_DWAv4rob']);
 outDir = fullfile(caseDir, 'results_RayStation_v1'); if ~exist(outDir, 'dir'), mkdir(outDir); end
-logTxt = fullfile(outDir, 'rs_dicom_summary_v1.txt'); fid = fopen(logTxt, 'w'); fidc = onCleanup(@() fclose('all'));
-say = @(varargin) cellfun(@(f) fprintf(f, varargin{:}), {1, fid});
+logTxt = fullfile(outDir, 'rs_dicom_summary_v1.txt');
+fid = fopen(logTxt, 'w'); if fid < 0, error('Cannot write %s', logTxt); end
+say = @(varargin) sayBoth(fid, varargin{:});        % print to the screen and to the summary txt
 
 %% 1  What is in Alaina's folder (headers only, no identifiers) --------------------------
 F = dir(fullfile(S.rsDir, '**', '*.dcm'));
@@ -241,8 +242,12 @@ catch err
 end
 save(fullfile(outDir, sprintf('rs_doses_%s_v1.mat', alias)), 'Drs', 'Dpb', 'Dmc', 'Drsm_pb', 'Drsm_mc', 'fPB', 'fMC', '-v7.3');
 say('Done. Results in %s\n', outDir);
+fclose(fid);
 
 %% ===================================================================================
+function sayBoth(fid, varargin)
+fprintf(1, varargin{:}); fprintf(fid, varargin{:});
+end
 function v = getf(s, f, d), if isfield(s, f), v = s.(f); else, v = d; end, end
 function o = ifelse(c, a, b), if c, o = a; else, o = b; end, end
 function v = idx(cst, n)
