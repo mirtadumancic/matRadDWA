@@ -4,7 +4,7 @@
 % Same as run_UHN_CNS_07_overnight_v1.m, plus runOnly and its own log/summary names.
 % A failure in one patient does not stop the other. Everything is logged.
 %
-% RUN ON THE UHN PC, from X:\matRadDWA_LET (subst X: "M:\My Documents" must exist):
+% RUN ON THE UHN PC (X: is created automatically if missing), e.g. from M:\My Documents\matRadDWA_LET:
 %   cd X:\matRadDWA_LET; run('CNS_ESTRO/run_UHN_CNS_07_patients_v1.m')
 % Afterwards: open the log (path printed at the start) and the summary file
 %   UHN_CNS_07_patients_summary_<date>.txt in the same folder.
@@ -25,6 +25,17 @@ sumFile = fullfile(dataRoot, sprintf('UHN_CNS_07_patients_summary_%s.txt', stamp
 diary(logFile); diary on
 fprintf('Run started %s\nLog: %s\n', datestr(now), logFile);
 here = fileparts(mfilename('fullpath'));
+% (Nov 9) MCsquare fails on paths with spaces ("M:\My Documents"): work from the X: drive
+% (subst X: "M:\My Documents"). subst is lost at every restart, so set it again if needed.
+xRoot = 'X:\matRadDWA_LET';
+if ispc && ~exist(xRoot, 'dir')
+    [st, msg] = system('subst X: "M:\My Documents"');
+    if st ~= 0 || ~exist(xRoot, 'dir')
+        error('Could not create X: with subst (%s): %s', 'subst X: "M:\My Documents"', msg);
+    end
+    fprintf('%s\n', 'X: created with subst X: "M:\My Documents"');
+end
+if ispc, here = fullfile(xRoot, 'CNS_ESTRO'); end
 script = fullfile(here, 'UHN_CNS_07_DWAv4_robustDoseOnly_clinicalGoals_v1.m');
 summary = {};
 for iPat = 1:numel(patients)
